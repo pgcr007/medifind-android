@@ -11,9 +11,9 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 
 @Composable
-fun TestMapScreen() {
+fun TestMapScreen(modifier: Modifier = Modifier) {
     AndroidView(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         factory = { context ->
             MapView(context).apply {
                 layoutParams = ViewGroup.LayoutParams(
@@ -23,7 +23,7 @@ fun TestMapScreen() {
                 setTileSource(TileSourceFactory.MAPNIK)
                 setMultiTouchControls(true)
                 controller.setZoom(15.0)
-                controller.setCenter(GeoPoint(19.0760, 72.8777)) // Mumbai coordinates
+                controller.setCenter(GeoPoint(19.0760, 72.8777))
             }
         }
     )

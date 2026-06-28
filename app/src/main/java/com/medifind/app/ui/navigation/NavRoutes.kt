@@ -10,6 +10,10 @@ object NavRoutes {
 
     const val PROFILE = "profile"
 
+    const val PRESCRIPTION_SCAN = "prescription_scan"
+
+    const val CHAT = "chat"
+
     fun pharmacyResults(medicineId: String, medicineName: String) =
         "pharmacy_results/$medicineId/$medicineName"
 

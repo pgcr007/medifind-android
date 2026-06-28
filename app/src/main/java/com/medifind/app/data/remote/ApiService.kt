@@ -32,4 +32,10 @@ interface ApiService {
 
     @GET("api/reservations/me")
     suspend fun getMyReservations(@Header("Authorization") token: String): Response<List<ReservationResponse>>
+
+    @POST("api/chat")
+    suspend fun sendChatMessage(
+        @Header("Authorization") token: String,
+        @Body request: ChatRequest
+    ): Response<ChatResponse>
 }

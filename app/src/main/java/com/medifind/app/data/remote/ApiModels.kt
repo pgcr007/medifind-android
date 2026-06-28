@@ -9,6 +9,11 @@ data class LoginResponse(val token: String, val user: UserResponse)
 
 data class MedicineResponse(val _id: String, val name: String, val genericName: String?, val category: String?)
 
+data class ChatRequest(val message: String)
+
+
+data class ChatResponse(val reply: String)
+
 data class PharmacyResponse(
     val _id: String,
     val name: String,

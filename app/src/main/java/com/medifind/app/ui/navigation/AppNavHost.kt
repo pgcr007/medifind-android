@@ -16,6 +16,22 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
 
     NavHost(navController = navController, startDestination = NavRoutes.LOGIN, modifier = modifier) {
 
+        composable(NavRoutes.CHAT) {
+            ChatScreen()
+        }
+
+        composable(NavRoutes.PRESCRIPTION_SCAN) {
+            PrescriptionScanScreen(
+                onMedicineNameSelected = { medicineName ->
+                    navController.navigate(NavRoutes.HOME) {
+                        popUpTo(NavRoutes.HOME) { inclusive = true }
+                    }
+                    // For now, navigating back to Home; pre-filling search is a nice-to-have
+                    // we can add via the SearchViewModel if you'd like a smoother handoff.
+                }
+            )
+        }
+
         composable(NavRoutes.LOGIN) {
             LoginScreen(
                 onLoginSuccess = {
@@ -43,7 +59,9 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                 onMedicineSelected = { medicine ->
                     navController.navigate(NavRoutes.pharmacyResults(medicine._id, medicine.name))
                 },
-                onProfileClick = { navController.navigate(NavRoutes.PROFILE) }
+                onProfileClick = { navController.navigate(NavRoutes.PROFILE) },
+                onScanClick = { navController.navigate(NavRoutes.PRESCRIPTION_SCAN) },
+                onChatClick = { navController.navigate(NavRoutes.CHAT) }
             )
         }
 

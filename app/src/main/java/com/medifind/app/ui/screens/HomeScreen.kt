@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -22,9 +24,11 @@ import com.medifind.app.ui.viewmodel.SearchViewModel
 fun HomeScreen(
     onMedicineSelected: (MedicineResponse) -> Unit,
     onProfileClick: () -> Unit,
+    onScanClick: () -> Unit,
+    onChatClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = viewModel()
-){
+) {
     val state = viewModel.uiState
 
     Scaffold(
@@ -33,6 +37,12 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("MediFind AI") },
                 actions = {
+                    IconButton(onClick = onScanClick) {
+                        Icon(Icons.Default.CameraAlt, contentDescription = "Scan Prescription")
+                    }
+                    IconButton(onClick = onChatClick) {
+                        Icon(Icons.Default.Chat, contentDescription = "Chat Assistant")
+                    }
                     IconButton(onClick = onProfileClick) {
                         Icon(Icons.Default.Person, contentDescription = "Profile")
                     }

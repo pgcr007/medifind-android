@@ -31,6 +31,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             val result = repository.login(email, password)
             result.onSuccess { response ->
                 tokenManager.saveToken(response.token)
+                tokenManager.saveUserInfo(response.user.name, response.user.email, response.user.role)
                 uiState = AuthUiState.Success(response.user.role)
             }.onFailure { error ->
                 uiState = AuthUiState.Error(error.message ?: "Login failed")

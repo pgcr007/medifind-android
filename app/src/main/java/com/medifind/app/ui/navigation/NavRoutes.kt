@@ -8,6 +8,8 @@ object NavRoutes {
     const val PHARMACY_DETAIL = "pharmacy_detail"
     const val RESERVATION_CONFIRMATION = "reservation_confirmation/{pharmacyName}/{medicineName}"
 
+    const val PROFILE = "profile"
+
     fun pharmacyResults(medicineId: String, medicineName: String) =
         "pharmacy_results/$medicineId/$medicineName"
 

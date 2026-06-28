@@ -1,18 +1,20 @@
 package com.medifind.app.ui.navigation
 
+import android.annotation.SuppressLint
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.medifind.app.data.remote.MedicineResponse
 import com.medifind.app.ui.screens.*
-import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 
+@SuppressLint("MissingPermission")
 @Composable
-fun AppNavHost(navController: NavHostController = rememberNavController()) {
+fun AppNavHost(navController: NavHostController = rememberNavController(), modifier: Modifier = Modifier) {
 
-    NavHost(navController = navController, startDestination = NavRoutes.LOGIN) {
+    NavHost(navController = navController, startDestination = NavRoutes.LOGIN, modifier = modifier) {
 
         composable(NavRoutes.LOGIN) {
             LoginScreen(
@@ -37,12 +39,11 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
         }
 
         composable(NavRoutes.HOME) {
-            var selectedMedicine: MedicineResponse? = null
             HomeScreen(
                 onMedicineSelected = { medicine ->
-                    selectedMedicine = medicine
                     navController.navigate(NavRoutes.pharmacyResults(medicine._id, medicine.name))
-                }
+                },
+                onProfileClick = { navController.navigate(NavRoutes.PROFILE) }
             )
         }
 
@@ -93,6 +94,16 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
                 onDone = {
                     navController.navigate(NavRoutes.HOME) {
                         popUpTo(NavRoutes.HOME) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(NavRoutes.PROFILE) {
+            ProfileScreen(
+                onLogout = {
+                    navController.navigate(NavRoutes.LOGIN) {
+                        popUpTo(0)
                     }
                 }
             )

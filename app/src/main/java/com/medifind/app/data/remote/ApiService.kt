@@ -24,6 +24,10 @@ interface ApiService {
     @GET("api/pharmacies/{id}")
     suspend fun getPharmacyById(@Path("id") id: String): Response<PharmacyResponse>
 
+
+    @GET("api/medicines/{id}/alternatives")
+    suspend fun getAlternatives(@Path("id") medicineId: String): Response<AlternativesResponse>
+
     @POST("api/reservations")
     suspend fun createReservation(
         @Header("Authorization") token: String,

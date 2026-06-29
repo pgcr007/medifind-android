@@ -17,4 +17,17 @@ class MedicineRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun getAlternatives(medicineId: String): Result<List<MedicineResponse>> {
+        return try {
+            val response = RetrofitInstance.api.getAlternatives(medicineId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.alternatives)
+            } else {
+                Result.failure(Exception(response.errorBody()?.string() ?: "Could not load alternatives"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

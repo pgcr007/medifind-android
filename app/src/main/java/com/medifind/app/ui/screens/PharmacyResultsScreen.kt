@@ -20,7 +20,6 @@ import com.medifind.app.data.remote.PharmacyNearbyResponse
 import com.medifind.app.data.repository.LocationHelper
 import com.medifind.app.ui.viewmodel.PharmacyResultsUiState
 import com.medifind.app.ui.viewmodel.PharmacyResultsViewModel
-import kotlinx.coroutines.launch
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
@@ -37,7 +36,6 @@ fun PharmacyResultsScreen(
     viewModel: PharmacyResultsViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var hasLocationPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -93,10 +91,36 @@ fun PharmacyResultsScreen(
             }
             is PharmacyResultsUiState.Success -> {
                 if (state.pharmacies.isEmpty()) {
-                    Text(
-                        text = "No nearby pharmacies currently stock this medicine.",
-                        modifier = Modifier.padding(16.dp)
-                    )
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(text = "No nearby pharmacies currently stock this medicine.")
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        if (viewModel.isLoadingAlternatives) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        } else if (viewModel.alternatives.isNotEmpty()) {
+                            Text(
+                                text = "Generic Alternatives",
+                                style = MaterialTheme.typography.titleSmall
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            viewModel.alternatives.forEach { alt ->
+                                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Text(text = alt.name, style = MaterialTheme.typography.bodyMedium)
+                                        alt.genericName?.let {
+                                            Text(text = "Generic: $it", style = MaterialTheme.typography.bodySmall)
+                                        }
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "⚠️ These are suggested alternatives with the same active ingredient. Always consult a doctor or pharmacist before switching medicines.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 } else {
                     // Map showing all pharmacy markers
                     AndroidView(

@@ -11,8 +11,9 @@ data class MedicineResponse(val _id: String, val name: String, val genericName: 
 
 data class ChatRequest(val message: String)
 
-
 data class ChatResponse(val reply: String)
+
+data class AlternativesResponse(val alternatives: List<MedicineResponse>)
 
 data class PharmacyResponse(
     val _id: String,

@@ -6,16 +6,23 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.medifind.app.data.remote.ChatSearchResults
 import com.medifind.app.data.repository.ChatRepository
+import com.medifind.app.data.repository.LocationHelper
 import com.medifind.app.data.repository.TokenManager
 import kotlinx.coroutines.launch
 
-data class ChatMessage(val text: String, val isUser: Boolean)
+data class ChatMessage(
+    val text: String,
+    val isUser: Boolean,
+    val searchResults: ChatSearchResults? = null
+)
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository = ChatRepository()
     private val tokenManager = TokenManager(application)
+    private val locationHelper = LocationHelper(application)
 
     var messages by mutableStateOf<List<ChatMessage>>(emptyList())
         private set
@@ -44,10 +51,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         errorMessage = null
 
         viewModelScope.launch {
-            val result = repository.sendMessage(token, text)
+            val location = locationHelper.getCurrentLocation()
+            val result = repository.sendMessage(token, text, location?.first, location?.second)
             isLoading = false
-            result.onSuccess { reply ->
-                messages = messages + ChatMessage(reply, isUser = false)
+            result.onSuccess { response ->
+                messages = messages + ChatMessage(response.reply, isUser = false, searchResults = response.searchResults)
             }.onFailure { error ->
                 errorMessage = error.message ?: "Something went wrong"
             }

@@ -108,20 +108,42 @@ fun ChatScreen(
 
 @Composable
 fun ChatBubble(message: ChatMessage) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
-    ) {
-        Surface(
-            color = if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
-            shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.widthIn(max = 280.dp)
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = if (message.isUser) Arrangement.End else Arrangement.Start
         ) {
-            Text(
-                text = message.text,
-                color = if (message.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(12.dp)
-            )
+            Surface(
+                color = if (message.isUser) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.widthIn(max = 280.dp)
+            ) {
+                Text(
+                    text = message.text,
+                    color = if (message.isUser) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+
+        message.searchResults?.let { results ->
+            Spacer(modifier = Modifier.height(8.dp))
+            results.pharmacies.take(3).forEach { pharmacy ->
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(text = pharmacy.pharmacyName, style = MaterialTheme.typography.bodyMedium)
+                        Text(text = pharmacy.address, style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                            pharmacy.distanceKm?.let {
+                                Text(text = "${"%.1f".format(it)} km", style = MaterialTheme.typography.bodySmall)
+                            }
+                            pharmacy.price?.let {
+                                Text(text = "₹$it", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

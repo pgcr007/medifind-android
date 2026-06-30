@@ -9,11 +9,13 @@ data class LoginResponse(val token: String, val user: UserResponse)
 
 data class MedicineResponse(val _id: String, val name: String, val genericName: String?, val category: String?)
 
-data class ChatRequest(val message: String)
+data class ChatRequest(val message: String, val lat: Double? = null, val lng: Double? = null)
 
-data class ChatResponse(val reply: String)
+data class ChatResponse(val reply: String, val searchResults: ChatSearchResults? = null)
 
 data class AlternativesResponse(val alternatives: List<MedicineResponse>)
+
+
 
 data class PharmacyResponse(
     val _id: String,
@@ -22,6 +24,20 @@ data class PharmacyResponse(
     val latitude: Double,
     val longitude: Double,
     val verified: Boolean
+)
+
+data class SearchResultPharmacy(
+    val pharmacyName: String,
+    val address: String,
+    val stockQty: Int? = null,
+    val price: Double? = null,
+    val distanceKm: Double? = null
+)
+
+data class ChatSearchResults(
+    val medicineId: String,
+    val medicineName: String,
+    val pharmacies: List<SearchResultPharmacy>
 )
 
 data class PharmacyNearbyResponse(

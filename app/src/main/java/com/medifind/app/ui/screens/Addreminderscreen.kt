@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.medifind.app.data.remote.MedicineResponse
+import com.medifind.app.ui.viewmodel.ReminderUiState
 import com.medifind.app.ui.viewmodel.ReminderViewModel
 import com.medifind.app.ui.viewmodel.SearchUiState
 import com.medifind.app.ui.viewmodel.SearchViewModel
@@ -27,6 +28,14 @@ fun AddReminderScreen(
     var dosageTimes by remember { mutableStateOf<List<String>>(emptyList()) }
 
     val searchState = searchViewModel.uiState
+
+    // Navigate back only after API succeeds
+    LaunchedEffect(reminderViewModel.uiState) {
+        if (reminderViewModel.uiState is ReminderUiState.Success) {
+            reminderViewModel.resetState()
+            onReminderCreated()
+        }
+    }
 
     Column(modifier = modifier.fillMaxSize().padding(16.dp)) {
         Text(text = "Add Medicine Reminder", style = MaterialTheme.typography.titleMedium)
@@ -125,15 +134,27 @@ fun AddReminderScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            if (reminderViewModel.uiState is ReminderUiState.Error) {
+                Text(
+                    text = (reminderViewModel.uiState as ReminderUiState.Error).message,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
             Button(
                 onClick = {
                     val days = refillDays.toIntOrNull() ?: 30
                     reminderViewModel.createReminder(selectedMedicine!!._id, dosageTimes, days)
-                    onReminderCreated()
                 },
+                enabled = reminderViewModel.uiState !is ReminderUiState.Loading,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Save Reminder")
+                if (reminderViewModel.uiState is ReminderUiState.Loading) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                } else {
+                    Text("Save Reminder")
+                }
             }
         }
     }

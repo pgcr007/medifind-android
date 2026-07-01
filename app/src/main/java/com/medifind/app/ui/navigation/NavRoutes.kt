@@ -14,8 +14,12 @@ object NavRoutes {
 
     const val CHAT = "chat"
 
-    const val REMINDERS = "reminders"           // ADD THIS
-    const val ADD_REMINDER = "add_reminder"     // ADD THIS
+    const val REMINDERS = "reminders"
+    const val ADD_REMINDER = "add_reminder"
+
+    const val PRESCRIPTION_VAULT = "prescription_vault"           // ADD THIS
+    const val PRESCRIPTION_SCAN_VAULT = "prescription_scan_vault" // ADD THIS
+    const val PRESCRIPTION_DETAIL = "prescription_detail"         // ADD THIS
 
     fun pharmacyResults(medicineId: String, medicineName: String) =
         "pharmacy_results/$medicineId/$medicineName"

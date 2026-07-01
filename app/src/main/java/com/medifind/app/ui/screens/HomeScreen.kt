@@ -19,6 +19,7 @@ import com.medifind.app.data.remote.MedicineResponse
 import com.medifind.app.ui.viewmodel.SearchUiState
 import com.medifind.app.ui.viewmodel.SearchViewModel
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.MedicalServices
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +28,8 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onScanClick: () -> Unit,
     onChatClick: () -> Unit,
-    onRemindersClick: () -> Unit,   // ADD THIS
+    onRemindersClick: () -> Unit,
+    onVaultClick: () -> Unit,   // ADD THIS
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = viewModel()
 ) {
@@ -41,6 +43,9 @@ fun HomeScreen(
                 actions = {
                     IconButton(onClick = onRemindersClick) {          // ADD THIS
                         Icon(Icons.Default.Notifications, contentDescription = "Reminders")
+                    }
+                    IconButton(onClick = onVaultClick) {   // ADD THIS
+                        Icon(Icons.Default.MedicalServices, contentDescription = "Prescription Vault")
                     }
                     IconButton(onClick = onScanClick) {
                         Icon(Icons.Default.CameraAlt, contentDescription = "Scan Prescription")

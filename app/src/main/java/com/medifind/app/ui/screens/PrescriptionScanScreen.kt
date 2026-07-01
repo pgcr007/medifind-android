@@ -25,18 +25,27 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.medifind.app.data.repository.OcrHelper
 import com.medifind.app.data.repository.PrescriptionParser
+import com.medifind.app.data.repository.PrescriptionRepository
+import com.medifind.app.data.repository.TokenManager
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
+
+enum class ScanMode { SEARCH, VAULT }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrescriptionScanScreen(
-    onMedicineNameSelected: (String) -> Unit,
+    mode: ScanMode = ScanMode.SEARCH,
+    onMedicineNameSelected: (String) -> Unit = {},
+    onSavedToVault: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = rememberCoroutineScope()
     val ocrHelper = remember { OcrHelper() }
+    val prescriptionRepository = remember { PrescriptionRepository(context.applicationContext) }
+    val tokenManager = remember { TokenManager(context) }
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -59,12 +68,20 @@ fun PrescriptionScanScreen(
 
     var imageCapture: ImageCapture? by remember { mutableStateOf(null) }
     var candidateLines by remember { mutableStateOf<List<String>>(emptyList()) }
+    var capturedBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var fullExtractedText by remember { mutableStateOf("") }
     var isProcessing by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Vault-mode review state
+    val selectedMedicines = remember { mutableStateListOf<String>() }
+    var doctorName by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    var isSaving by remember { mutableStateOf(false) }
+
     Column(modifier = modifier.fillMaxSize()) {
         Text(
-            text = "Scan Prescription",
+            text = if (mode == ScanMode.VAULT) "Scan Prescription for Vault" else "Scan Prescription",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(16.dp)
         )
@@ -150,6 +167,8 @@ fun PrescriptionScanScreen(
                                         if (lines.isEmpty()) {
                                             errorMessage = "No readable text found. Try again with better lighting."
                                         } else {
+                                            capturedBitmap = bitmap
+                                            fullExtractedText = text
                                             candidateLines = lines
                                         }
                                     }.onFailure {
@@ -170,8 +189,8 @@ fun PrescriptionScanScreen(
             ) {
                 Text("Capture Prescription")
             }
-        } else {
-            // Show detected lines for the user to pick from
+        } else if (mode == ScanMode.SEARCH) {
+            // Existing search-mode behavior: pick one line
             Text(
                 text = "Select the medicine name detected:",
                 style = MaterialTheme.typography.bodyMedium,
@@ -195,6 +214,109 @@ fun PrescriptionScanScreen(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text("Retake Photo")
+            }
+        } else {
+            // VAULT mode: review + save
+            LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
+                item {
+                    Text(
+                        text = "Select medicines to save:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+                items(candidateLines) { line ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                    ) {
+                        Checkbox(
+                            checked = selectedMedicines.contains(line),
+                            onCheckedChange = { checked ->
+                                if (checked) selectedMedicines.add(line)
+                                else selectedMedicines.remove(line)
+                            }
+                        )
+                        Text(text = line)
+                    }
+                }
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = doctorName,
+                        onValueChange = { doctorName = it },
+                        label = { Text("Doctor Name (optional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = notes,
+                        onValueChange = { notes = it },
+                        label = { Text("Notes (optional)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            errorMessage?.let {
+                Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+            }
+
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                TextButton(
+                    onClick = {
+                        candidateLines = emptyList()
+                        selectedMedicines.clear()
+                        capturedBitmap = null
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Retake Photo")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        val bitmap = capturedBitmap ?: return@Button
+                        val token = tokenManager.getToken()
+                        if (token == null) {
+                            errorMessage = "Please log in to save to your vault."
+                            return@Button
+                        }
+
+                        isSaving = true
+                        errorMessage = null
+                        scope.launch {
+                            val stream = ByteArrayOutputStream()
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, stream)
+                            val imageBytes = stream.toByteArray()
+                            val localImageId = prescriptionRepository.saveImageLocally(imageBytes)
+
+                            val result = prescriptionRepository.createPrescription(
+                                token = token,
+                                localImageId = localImageId,
+                                extractedText = fullExtractedText,
+                                medicines = selectedMedicines.toList(),
+                                doctorName = doctorName.ifBlank { null },
+                                notes = notes.ifBlank { null }
+                            )
+                            isSaving = false
+                            result.onSuccess {
+                                onSavedToVault()
+                            }.onFailure {
+                                errorMessage = "Failed to save: ${it.message}"
+                                prescriptionRepository.deleteImageLocally(localImageId)
+                            }
+                        }
+                    },
+                    enabled = !isSaving && selectedMedicines.isNotEmpty(),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text("Save to Vault")
+                    }
+                }
             }
         }
     }

@@ -62,8 +62,8 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                 onProfileClick = { navController.navigate(NavRoutes.PROFILE) },
                 onScanClick = { navController.navigate(NavRoutes.PRESCRIPTION_SCAN) },
                 onChatClick = { navController.navigate(NavRoutes.CHAT) },
-                onRemindersClick = { navController.navigate(NavRoutes.REMINDERS) }   // ADD THIS
-
+                onRemindersClick = { navController.navigate(NavRoutes.REMINDERS) },
+                onVaultClick = { navController.navigate(NavRoutes.PRESCRIPTION_VAULT) }  // ADD THIS
             )
         }
 
@@ -138,6 +138,41 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
             AddReminderScreen(
                 onReminderCreated = { navController.popBackStack() }
             )
+        }
+        composable(NavRoutes.PRESCRIPTION_VAULT) {
+            PrescriptionVaultScreen(
+                onAddNew = { navController.navigate(NavRoutes.PRESCRIPTION_SCAN_VAULT) },
+                onOpenDetail = { prescription ->
+                    SelectedPrescriptionHolder.prescription = prescription
+                    navController.navigate(NavRoutes.PRESCRIPTION_DETAIL)
+                }
+            )
+        }
+
+        composable(NavRoutes.PRESCRIPTION_SCAN_VAULT) {
+            PrescriptionScanScreen(
+                mode = ScanMode.VAULT,
+                onSavedToVault = {
+                    navController.navigate(NavRoutes.PRESCRIPTION_VAULT) {
+                        popUpTo(NavRoutes.PRESCRIPTION_VAULT) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(NavRoutes.PRESCRIPTION_DETAIL) {
+            val prescription = SelectedPrescriptionHolder.prescription
+            if (prescription != null) {
+                PrescriptionDetailScreen(
+                    prescription = prescription,
+                    onBack = { navController.popBackStack() },
+                    onDeleted = {
+                        navController.navigate(NavRoutes.PRESCRIPTION_VAULT) {
+                            popUpTo(NavRoutes.PRESCRIPTION_VAULT) { inclusive = true }
+                        }
+                    }
+                )
+            }
         }
     }
 

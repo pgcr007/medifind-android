@@ -72,4 +72,32 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: ChatRequest
     ): Response<ChatResponse>
+
+    @POST("api/prescriptions")
+    suspend fun createPrescription(
+        @Header("Authorization") token: String,
+        @Body request: PrescriptionRequest
+    ): Response<PrescriptionResponse>
+
+    @GET("api/prescriptions")
+    suspend fun getMyPrescriptions(@Header("Authorization") token: String): Response<List<PrescriptionResponse>>
+
+    @GET("api/prescriptions/{id}")
+    suspend fun getPrescriptionById(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<PrescriptionResponse>
+
+    @PUT("api/prescriptions/{id}")
+    suspend fun updatePrescription(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Body request: PrescriptionUpdateRequest
+    ): Response<PrescriptionResponse>
+
+    @DELETE("api/prescriptions/{id}")
+    suspend fun deletePrescription(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<Unit>
 }

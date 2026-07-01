@@ -18,6 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.medifind.app.data.remote.MedicineResponse
 import com.medifind.app.ui.viewmodel.SearchUiState
 import com.medifind.app.ui.viewmodel.SearchViewModel
+import androidx.compose.material.icons.filled.Notifications
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,6 +27,7 @@ fun HomeScreen(
     onProfileClick: () -> Unit,
     onScanClick: () -> Unit,
     onChatClick: () -> Unit,
+    onRemindersClick: () -> Unit,   // ADD THIS
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = viewModel()
 ) {
@@ -37,6 +39,9 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text("MediFind AI") },
                 actions = {
+                    IconButton(onClick = onRemindersClick) {          // ADD THIS
+                        Icon(Icons.Default.Notifications, contentDescription = "Reminders")
+                    }
                     IconButton(onClick = onScanClick) {
                         Icon(Icons.Default.CameraAlt, contentDescription = "Scan Prescription")
                     }

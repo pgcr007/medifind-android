@@ -5,6 +5,36 @@ import retrofit2.http.*
 
 interface ApiService {
 
+    @POST("api/reminders")
+    suspend fun createReminder(
+        @Header("Authorization") token: String,
+        @Body request: ReminderRequest
+    ): Response<ReminderResponse>
+
+    @GET("api/reminders")
+    suspend fun getMyReminders(@Header("Authorization") token: String): Response<List<ReminderResponse>>
+
+    @PUT("api/reminders/{id}")
+    suspend fun updateReminder(
+        @Header("Authorization") token: String,
+        @Path("id") id: String,
+        @Body request: ReminderUpdateRequest
+    ): Response<ReminderResponse>
+
+    @DELETE("api/reminders/{id}")
+    suspend fun deleteReminder(
+        @Header("Authorization") token: String,
+        @Path("id") id: String
+    ): Response<Unit>
+
+    @PUT("api/auth/fcm-token")
+    suspend fun updateFcmToken(
+        @Header("Authorization") token: String,
+        @Body request: FcmTokenRequest
+    ): Response<Unit>
+
+
+
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<UserResponse>
 

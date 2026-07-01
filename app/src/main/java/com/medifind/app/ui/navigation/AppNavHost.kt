@@ -61,7 +61,9 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                 },
                 onProfileClick = { navController.navigate(NavRoutes.PROFILE) },
                 onScanClick = { navController.navigate(NavRoutes.PRESCRIPTION_SCAN) },
-                onChatClick = { navController.navigate(NavRoutes.CHAT) }
+                onChatClick = { navController.navigate(NavRoutes.CHAT) },
+                onRemindersClick = { navController.navigate(NavRoutes.REMINDERS) }   // ADD THIS
+
             )
         }
 
@@ -126,5 +128,17 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                 }
             )
         }
+        composable(NavRoutes.REMINDERS) {
+            ReminderScreen(
+                onAddReminder = { navController.navigate(NavRoutes.ADD_REMINDER) }
+            )
+        }
+
+        composable(NavRoutes.ADD_REMINDER) {
+            AddReminderScreen(
+                onReminderCreated = { navController.popBackStack() }
+            )
+        }
     }
+
 }

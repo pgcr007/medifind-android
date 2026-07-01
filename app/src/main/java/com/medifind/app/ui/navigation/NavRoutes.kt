@@ -14,6 +14,9 @@ object NavRoutes {
 
     const val CHAT = "chat"
 
+    const val REMINDERS = "reminders"           // ADD THIS
+    const val ADD_REMINDER = "add_reminder"     // ADD THIS
+
     fun pharmacyResults(medicineId: String, medicineName: String) =
         "pharmacy_results/$medicineId/$medicineName"
 

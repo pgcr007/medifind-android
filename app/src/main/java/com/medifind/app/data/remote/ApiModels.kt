@@ -61,3 +61,29 @@ data class ReservationResponse(
     val medicineId: String,
     val status: String
 )
+data class ReminderRequest(
+    val medicineId: String,
+    val dosageTimes: List<String>,
+    val refillIntervalDays: Int
+)
+
+data class ReminderUpdateRequest(
+    val dosageTimes: List<String>? = null,
+    val refillIntervalDays: Int? = null,
+    val isActive: Boolean? = null
+)
+
+data class ReminderResponse(
+    val _id: String,
+    val userId: String,
+    val medicineId: MedicineResponse,
+    val dosageTimes: List<String>,
+    val refillIntervalDays: Int,
+    val lastRefillDate: String,
+    val refillReminderSent: Boolean,
+    val isActive: Boolean
+)
+
+data class FcmTokenRequest(
+    val fcmToken: String
+)

@@ -6,9 +6,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.google.firebase.messaging.FirebaseMessaging
+import com.medifind.app.data.remote.FcmTokenRequest
+import com.medifind.app.data.remote.RetrofitInstance
 import com.medifind.app.data.repository.AuthRepository
 import com.medifind.app.data.repository.TokenManager
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 sealed class AuthUiState {
     object Idle : AuthUiState()
@@ -33,6 +37,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 tokenManager.saveToken(response.token)
                 tokenManager.saveUserInfo(response.user.name, response.user.email, response.user.role)
                 uiState = AuthUiState.Success(response.user.role)
+                registerFcmToken(response.token)
             }.onFailure { error ->
                 uiState = AuthUiState.Error(error.message ?: "Login failed")
             }
@@ -53,5 +58,20 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
     fun resetState() {
         uiState = AuthUiState.Idle
+    }
+
+    private fun registerFcmToken(jwtToken: String) {
+        viewModelScope.launch {
+            try {
+                val fcmToken = FirebaseMessaging.getInstance().token.await()
+                RetrofitInstance.api.updateFcmToken(
+                    token = "Bearer $jwtToken",
+                    request = FcmTokenRequest(fcmToken)
+                )
+            } catch (e: Exception) {
+                // Non-fatal — user can still use the app, just won't get push notifications
+                // until next successful registration attempt.
+            }
+        }
     }
 }

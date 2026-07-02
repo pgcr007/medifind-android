@@ -77,9 +77,13 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                 onPharmacySelected = { pharmacy ->
                     SelectedPharmacyHolder.pharmacy = pharmacy
                     navController.navigate(NavRoutes.PHARMACY_DETAIL)
+                },
+                onComparePricesClick = {
+                    navController.navigate(NavRoutes.priceComparison(medicineId, medicineName))
                 }
             )
         }
+
 
         composable(NavRoutes.PHARMACY_DETAIL) { backStackEntry ->
             // Get medicineId/medicineName from the previous PHARMACY_RESULTS entry on the back stack
@@ -186,6 +190,12 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                     }
                 )
             }
+        }
+
+        composable(NavRoutes.PRICE_COMPARISON) { backStackEntry ->
+            val medicineId = backStackEntry.arguments?.getString("medicineId") ?: ""
+            val medicineName = backStackEntry.arguments?.getString("medicineName") ?: ""
+            PriceComparisonScreen(medicineId = medicineId, medicineName = medicineName)
         }
     }
 

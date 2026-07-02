@@ -32,6 +32,7 @@ fun PharmacyResultsScreen(
     medicineId: String,
     medicineName: String,
     onPharmacySelected: (PharmacyNearbyResponse) -> Unit,
+    onComparePricesClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PharmacyResultsViewModel = viewModel()
 ) {
@@ -65,6 +66,7 @@ fun PharmacyResultsScreen(
     }
 
     val state = viewModel.uiState
+    var sortByPrice by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxSize()) {
         Text(
@@ -72,6 +74,29 @@ fun PharmacyResultsScreen(
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(16.dp)
         )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            FilterChip(
+                selected = !sortByPrice,
+                onClick = { sortByPrice = false },
+                label = { Text("Nearest") }
+            )
+            FilterChip(
+                selected = sortByPrice,
+                onClick = { sortByPrice = true },
+                label = { Text("Cheapest") }
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        TextButton(
+            onClick = onComparePricesClick,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        ) {
+            Text("Compare Prices Across Alternatives")
+        }
 
         when (state) {
             is PharmacyResultsUiState.Loading -> {
@@ -119,6 +144,16 @@ fun PharmacyResultsScreen(
                         }
                     }
                 } else {
+                    val sortedPharmacies = if (sortByPrice) {
+                        state.pharmacies.sortedBy { it.price?.toDouble() ?: Double.MAX_VALUE }
+                    } else {
+                        state.pharmacies
+                    }
+                    val cheapestId = state.pharmacies
+                        .filter { it.price != null }
+                        .minByOrNull { it.price!! }
+                        ?._id
+
                     // Map showing all pharmacy markers
                     AndroidView(
                         modifier = Modifier.fillMaxWidth().height(220.dp).padding(horizontal = 16.dp),
@@ -129,10 +164,10 @@ fun PharmacyResultsScreen(
                                 setTileSource(TileSourceFactory.MAPNIK)
                                 setMultiTouchControls(true)
                                 controller.setZoom(13.0)
-                                val first = state.pharmacies.first()
+                                val first = sortedPharmacies.first()
                                 controller.setCenter(GeoPoint(first.latitude, first.longitude))
 
-                                state.pharmacies.forEach { pharmacy ->
+                                sortedPharmacies.forEach { pharmacy ->
                                     val marker = Marker(this)
                                     marker.position = GeoPoint(pharmacy.latitude, pharmacy.longitude)
                                     marker.title = pharmacy.name
@@ -145,8 +180,12 @@ fun PharmacyResultsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        items(state.pharmacies) { pharmacy ->
-                            PharmacyCard(pharmacy = pharmacy, onClick = { onPharmacySelected(pharmacy) })
+                        items(sortedPharmacies) { pharmacy ->
+                            PharmacyCard(
+                                pharmacy = pharmacy,
+                                isCheapest = pharmacy.price != null && pharmacy._id == cheapestId,
+                                onClick = { onPharmacySelected(pharmacy) }
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
@@ -157,12 +196,21 @@ fun PharmacyResultsScreen(
 }
 
 @Composable
-fun PharmacyCard(pharmacy: PharmacyNearbyResponse, onClick: () -> Unit) {
+fun PharmacyCard(pharmacy: PharmacyNearbyResponse, isCheapest: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = pharmacy.name, style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = pharmacy.name, style = MaterialTheme.typography.titleMedium)
+                if (isCheapest) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("Best Price", style = MaterialTheme.typography.labelSmall) }
+                    )
+                }
+            }
             Text(text = pharmacy.address, style = MaterialTheme.typography.bodySmall)
             Spacer(modifier = Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {

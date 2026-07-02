@@ -61,9 +61,10 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                 },
                 onProfileClick = { navController.navigate(NavRoutes.PROFILE) },
                 onScanClick = { navController.navigate(NavRoutes.PRESCRIPTION_SCAN) },
+                onBarcodeScanClick = { navController.navigate(NavRoutes.BARCODE_SCAN) },
                 onChatClick = { navController.navigate(NavRoutes.CHAT) },
                 onRemindersClick = { navController.navigate(NavRoutes.REMINDERS) },
-                onVaultClick = { navController.navigate(NavRoutes.PRESCRIPTION_VAULT) }  // ADD THIS
+                onVaultClick = { navController.navigate(NavRoutes.PRESCRIPTION_VAULT) }
             )
         }
 
@@ -155,6 +156,18 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                 onSavedToVault = {
                     navController.navigate(NavRoutes.PRESCRIPTION_VAULT) {
                         popUpTo(NavRoutes.PRESCRIPTION_VAULT) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(NavRoutes.BARCODE_SCAN) {
+            PrescriptionScanScreen(
+                mode = ScanMode.BARCODE,
+                onMedicineNameSelected = { value ->
+                    PendingSearchQueryHolder.query = value
+                    navController.navigate(NavRoutes.HOME) {
+                        popUpTo(NavRoutes.HOME) { inclusive = true }
                     }
                 }
             )

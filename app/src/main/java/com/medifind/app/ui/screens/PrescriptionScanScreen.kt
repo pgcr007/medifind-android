@@ -29,9 +29,11 @@ import com.medifind.app.data.repository.PrescriptionRepository
 import com.medifind.app.data.repository.TokenManager
 import kotlinx.coroutines.launch
 import java.io.ByteArrayOutputStream
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
+import kotlinx.coroutines.suspendCancellableCoroutine
 
-enum class ScanMode { SEARCH, VAULT }
-
+enum class ScanMode { SEARCH, VAULT, BARCODE }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrescriptionScanScreen(
@@ -81,7 +83,11 @@ fun PrescriptionScanScreen(
 
     Column(modifier = modifier.fillMaxSize()) {
         Text(
-            text = if (mode == ScanMode.VAULT) "Scan Prescription for Vault" else "Scan Prescription",
+            text = when (mode) {
+                ScanMode.VAULT -> "Scan Prescription for Vault"
+                ScanMode.BARCODE -> "Scan Barcode"
+                ScanMode.SEARCH -> "Scan Prescription"
+            },
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(16.dp)
         )
@@ -160,19 +166,29 @@ fun PrescriptionScanScreen(
                                 val bitmap = imageProxyToBitmap(image)
                                 image.close()
                                 scope.launch {
-                                    val result = ocrHelper.extractText(bitmap)
-                                    isProcessing = false
-                                    result.onSuccess { text ->
-                                        val lines = PrescriptionParser.extractCandidateLines(text)
-                                        if (lines.isEmpty()) {
-                                            errorMessage = "No readable text found. Try again with better lighting."
-                                        } else {
-                                            capturedBitmap = bitmap
-                                            fullExtractedText = text
-                                            candidateLines = lines
+                                    if (mode == ScanMode.BARCODE) {
+                                        val result = scanBarcode(bitmap)
+                                        isProcessing = false
+                                        result.onSuccess { value ->
+                                            onMedicineNameSelected(value)
+                                        }.onFailure {
+                                            errorMessage = it.message ?: "No barcode detected. Try again."
                                         }
-                                    }.onFailure {
-                                        errorMessage = "OCR failed: ${it.message}"
+                                    } else {
+                                        val result = ocrHelper.extractText(bitmap)
+                                        isProcessing = false
+                                        result.onSuccess { text ->
+                                            val lines = PrescriptionParser.extractCandidateLines(text)
+                                            if (lines.isEmpty()) {
+                                                errorMessage = "No readable text found. Try again with better lighting."
+                                            } else {
+                                                capturedBitmap = bitmap
+                                                fullExtractedText = text
+                                                candidateLines = lines
+                                            }
+                                        }.onFailure {
+                                            errorMessage = "OCR failed: ${it.message}"
+                                        }
                                     }
                                 }
                             }
@@ -187,7 +203,8 @@ fun PrescriptionScanScreen(
                 enabled = !isProcessing,
                 modifier = Modifier.fillMaxWidth().padding(16.dp)
             ) {
-                Text("Capture Prescription")
+                Text(if (mode == ScanMode.BARCODE) "Scan Barcode" else "Capture Prescription")
+
             }
         } else if (mode == ScanMode.SEARCH) {
             // Existing search-mode behavior: pick one line
@@ -328,3 +345,21 @@ private fun imageProxyToBitmap(image: androidx.camera.core.ImageProxy): Bitmap {
     buffer.get(bytes)
     return android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
 }
+
+private suspend fun scanBarcode(bitmap: Bitmap): Result<String> =
+    suspendCancellableCoroutine { cont ->
+        val image = InputImage.fromBitmap(bitmap, 0)
+        val scanner = BarcodeScanning.getClient()
+        scanner.process(image)
+            .addOnSuccessListener { barcodes ->
+                val value = barcodes.firstOrNull()?.rawValue
+                if (value != null) {
+                    cont.resumeWith(Result.success(Result.success(value)))
+                } else {
+                    cont.resumeWith(Result.success(Result.failure(Exception("No barcode detected. Try again."))))
+                }
+            }
+            .addOnFailureListener { e ->
+                cont.resumeWith(Result.success(Result.failure(e)))
+            }
+    }

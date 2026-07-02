@@ -20,6 +20,9 @@ import com.medifind.app.ui.viewmodel.SearchUiState
 import com.medifind.app.ui.viewmodel.SearchViewModel
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.QrCodeScanner
+import com.medifind.app.ui.navigation.PendingSearchQueryHolder
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,13 +30,22 @@ fun HomeScreen(
     onMedicineSelected: (MedicineResponse) -> Unit,
     onProfileClick: () -> Unit,
     onScanClick: () -> Unit,
+    onBarcodeScanClick: () -> Unit,
     onChatClick: () -> Unit,
     onRemindersClick: () -> Unit,
-    onVaultClick: () -> Unit,   // ADD THIS
+    onVaultClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = viewModel()
 ) {
     val state = viewModel.uiState
+
+    LaunchedEffect(Unit) {
+        PendingSearchQueryHolder.query?.let { pending ->
+            PendingSearchQueryHolder.query = null
+            viewModel.onQueryChange(pending)
+            viewModel.search()
+        }
+    }
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -49,6 +61,9 @@ fun HomeScreen(
                     }
                     IconButton(onClick = onScanClick) {
                         Icon(Icons.Default.CameraAlt, contentDescription = "Scan Prescription")
+                    }
+                    IconButton(onClick = onBarcodeScanClick) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan Barcode")
                     }
                     IconButton(onClick = onChatClick) {
                         Icon(Icons.Default.Chat, contentDescription = "Chat Assistant")

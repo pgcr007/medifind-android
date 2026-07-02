@@ -21,6 +21,9 @@ object NavRoutes {
     const val PRESCRIPTION_SCAN_VAULT = "prescription_scan_vault" // ADD THIS
     const val PRESCRIPTION_DETAIL = "prescription_detail"         // ADD THIS
 
+    // add alongside PRESCRIPTION_SCAN_VAULT
+    const val BARCODE_SCAN = "barcode_scan"
+
     fun pharmacyResults(medicineId: String, medicineName: String) =
         "pharmacy_results/$medicineId/$medicineName"
 

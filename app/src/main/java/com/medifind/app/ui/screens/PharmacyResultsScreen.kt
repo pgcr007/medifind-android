@@ -25,6 +25,7 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import android.view.View
 
 @androidx.annotation.RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
 @Composable
@@ -163,6 +164,7 @@ fun PharmacyResultsScreen(
                                 layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                                 setTileSource(TileSourceFactory.MAPNIK)
                                 setMultiTouchControls(true)
+                                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                                 controller.setZoom(13.0)
                                 val first = sortedPharmacies.first()
                                 controller.setCenter(GeoPoint(first.latitude, first.longitude))

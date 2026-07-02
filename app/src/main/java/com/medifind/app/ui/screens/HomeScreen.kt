@@ -65,7 +65,8 @@ fun HomeScreen(
             scope.launch {
                 isListening = true
                 voiceError = null
-                val result = listenForSpeech(context)
+                val result = kotlinx.coroutines.withTimeoutOrNull(10_000) { listenForSpeech(context) }
+                    ?: Result.failure(Exception("Listening timed out. Try again."))
                 isListening = false
                 result.onSuccess { text ->
                     viewModel.onQueryChange(text)
@@ -88,7 +89,7 @@ fun HomeScreen(
             scope.launch {
                 isListening = true
                 voiceError = null
-                val result = listenForSpeech(context)
+                val result = kotlinx.coroutines.withTimeoutOrNull(10_000) { listenForSpeech(context) } ?: Result.failure(Exception("Listening timed out. Try again."))
                 isListening = false
                 result.onSuccess { text ->
                     viewModel.onQueryChange(text)

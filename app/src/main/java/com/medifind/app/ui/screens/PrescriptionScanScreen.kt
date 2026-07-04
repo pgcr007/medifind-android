@@ -11,29 +11,37 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
 import com.medifind.app.data.repository.OcrHelper
 import com.medifind.app.data.repository.PrescriptionParser
 import com.medifind.app.data.repository.PrescriptionRepository
 import com.medifind.app.data.repository.TokenManager
 import kotlinx.coroutines.launch
-import java.io.ByteArrayOutputStream
-import com.google.mlkit.vision.barcode.BarcodeScanning
-import com.google.mlkit.vision.common.InputImage
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.io.ByteArrayOutputStream
 
 enum class ScanMode { SEARCH, VAULT, BARCODE }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrescriptionScanScreen(
@@ -75,20 +83,24 @@ fun PrescriptionScanScreen(
     var isProcessing by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Vault-mode review state
     val selectedMedicines = remember { mutableStateListOf<String>() }
     var doctorName by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         Text(
             text = when (mode) {
                 ScanMode.VAULT -> "Scan Prescription for Vault"
                 ScanMode.BARCODE -> "Scan Barcode"
                 ScanMode.SEARCH -> "Scan Prescription"
             },
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(16.dp)
         )
 
@@ -98,20 +110,31 @@ fun PrescriptionScanScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = if (mode == ScanMode.BARCODE) Icons.Default.QrCodeScanner else Icons.Default.CameraAlt,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(44.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Camera permission is required to scan prescriptions.",
+                        text = "Camera permission is required to scan.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp)
                     )
-                    Button(onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) }) {
+                    Button(
+                        onClick = { permissionLauncher.launch(Manifest.permission.CAMERA) },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
                         Text("Grant Permission")
                     }
                 }
             }
         } else if (candidateLines.isEmpty()) {
-            // Camera preview
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
                 AndroidView(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(16.dp)),
                     factory = { ctx ->
                         val previewView = PreviewView(ctx)
                         val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
@@ -143,13 +166,17 @@ fun PrescriptionScanScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
 
             errorMessage?.let {
-                Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp)
+                )
             }
 
             Button(
@@ -201,28 +228,40 @@ fun PrescriptionScanScreen(
                     )
                 },
                 enabled = !isProcessing,
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp)
             ) {
-                Text(if (mode == ScanMode.BARCODE) "Scan Barcode" else "Capture Prescription")
-
+                Text(
+                    if (mode == ScanMode.BARCODE) "Scan Barcode" else "Capture Prescription",
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         } else if (mode == ScanMode.SEARCH) {
-            // Existing search-mode behavior: pick one line
             Text(
                 text = "Select the medicine name detected:",
                 style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
+            LazyColumn(
+                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(candidateLines) { line ->
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         onClick = { onMedicineNameSelected(line) }
                     ) {
-                        Text(text = line, modifier = Modifier.padding(16.dp))
+                        Text(
+                            text = line,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(16.dp)
+                        )
                     }
                 }
             }
@@ -230,15 +269,18 @@ fun PrescriptionScanScreen(
                 onClick = { candidateLines = emptyList() },
                 modifier = Modifier.padding(16.dp)
             ) {
-                Text("Retake Photo")
+                Text("Retake Photo", color = MaterialTheme.colorScheme.secondary)
             }
         } else {
-            // VAULT mode: review + save
-            LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 16.dp)) {
+            LazyColumn(
+                modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 item {
                     Text(
                         text = "Select medicines to save:",
                         style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
                 }
@@ -252,9 +294,12 @@ fun PrescriptionScanScreen(
                             onCheckedChange = { checked ->
                                 if (checked) selectedMedicines.add(line)
                                 else selectedMedicines.remove(line)
-                            }
+                            },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = MaterialTheme.colorScheme.primary
+                            )
                         )
-                        Text(text = line)
+                        Text(text = line, color = MaterialTheme.colorScheme.onSurface)
                     }
                 }
                 item {
@@ -263,6 +308,11 @@ fun PrescriptionScanScreen(
                         value = doctorName,
                         onValueChange = { doctorName = it },
                         label = { Text("Doctor Name (optional)") },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -270,23 +320,34 @@ fun PrescriptionScanScreen(
                         value = notes,
                         onValueChange = { notes = it },
                         label = { Text("Notes (optional)") },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
             }
 
             errorMessage?.let {
-                Text(text = it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp))
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
 
             Row(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-                TextButton(
+                OutlinedButton(
                     onClick = {
                         candidateLines = emptyList()
                         selectedMedicines.clear()
                         capturedBitmap = null
                     },
-                    modifier = Modifier.weight(1f)
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
                     Text("Retake Photo")
                 }
@@ -326,12 +387,18 @@ fun PrescriptionScanScreen(
                         }
                     },
                     enabled = !isSaving && selectedMedicines.isNotEmpty(),
-                    modifier = Modifier.weight(1f)
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.weight(1f).height(48.dp)
                 ) {
                     if (isSaving) {
-                        CircularProgressIndicator(modifier = Modifier.height(20.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.height(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
                     } else {
-                        Text("Save to Vault")
+                        Text("Save to Vault", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

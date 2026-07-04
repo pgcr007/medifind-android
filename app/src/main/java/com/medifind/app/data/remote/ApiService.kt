@@ -100,4 +100,13 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Path("id") id: String
     ): Response<Unit>
+
+    @GET("api/auth/me")
+    suspend fun getProfile(@Header("Authorization") token: String): Response<UserProfileResponse>
+
+    @PUT("api/auth/profile")
+    suspend fun updateProfile(
+        @Header("Authorization") token: String,
+        @Body request: ProfileUpdateRequest
+    ): Response<UserProfileResponse>
 }

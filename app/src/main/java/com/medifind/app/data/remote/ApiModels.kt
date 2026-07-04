@@ -73,6 +73,25 @@ data class ReminderUpdateRequest(
     val isActive: Boolean? = null
 )
 
+data class UserProfileResponse(
+    val _id: String,
+    val name: String,
+    val email: String,
+    val role: String,
+    val phone: String? = null,
+    val address: String? = null,
+    val dob: String? = null,
+    val profilePicture: String? = null
+)
+
+data class ProfileUpdateRequest(
+    val name: String? = null,
+    val phone: String? = null,
+    val address: String? = null,
+    val dob: String? = null,
+    val profilePicture: String? = null
+)
+
 data class ReservationDetailResponse(
     val _id: String,
     val userId: String,

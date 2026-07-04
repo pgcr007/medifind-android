@@ -1,4 +1,5 @@
 package com.medifind.app.ui.navigation
+import android.net.Uri
 
 object NavRoutes {
     const val LOGIN = "login"
@@ -28,11 +29,11 @@ object NavRoutes {
     const val BARCODE_SCAN = "barcode_scan"
 
     fun pharmacyResults(medicineId: String, medicineName: String) =
-        "pharmacy_results/$medicineId/$medicineName"
+        "pharmacy_results/$medicineId/${Uri.encode(medicineName)}"
 
     fun priceComparison(medicineId: String, medicineName: String) =
-        "price_comparison/$medicineId/$medicineName"
+        "price_comparison/$medicineId/${Uri.encode(medicineName)}"
 
     fun reservationConfirmation(pharmacyName: String, medicineName: String) =
-        "reservation_confirmation/$pharmacyName/$medicineName"
+        "reservation_confirmation/${Uri.encode(pharmacyName)}/${Uri.encode(medicineName)}"
 }

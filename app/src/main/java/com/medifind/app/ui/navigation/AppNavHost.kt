@@ -9,6 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.medifind.app.ui.screens.*
 import androidx.compose.ui.Modifier
+import android.net.Uri
 
 @SuppressLint("MissingPermission")
 @Composable
@@ -57,7 +58,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
         composable(NavRoutes.HOME) {
             HomeScreen(
                 onMedicineSelected = { medicine ->
-                    navController.navigate(NavRoutes.pharmacyResults(medicine._id, medicine.name))
+                    navController.navigate(NavRoutes.pharmacyResults(medicine._id, Uri.encode(medicine.name)))
                 },
                 onProfileClick = { navController.navigate(NavRoutes.PROFILE) },
                 onScanClick = { navController.navigate(NavRoutes.PRESCRIPTION_SCAN) },
@@ -70,7 +71,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
 
         composable(NavRoutes.PHARMACY_RESULTS) { backStackEntry ->
             val medicineId = backStackEntry.arguments?.getString("medicineId") ?: ""
-            val medicineName = backStackEntry.arguments?.getString("medicineName") ?: ""
+            val medicineName = Uri.decode(backStackEntry.arguments?.getString("medicineName") ?: "")
             PharmacyResultsScreen(
                 medicineId = medicineId,
                 medicineName = medicineName,
@@ -111,8 +112,8 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
         }
 
         composable(NavRoutes.RESERVATION_CONFIRMATION) { backStackEntry ->
-            val pharmacyName = backStackEntry.arguments?.getString("pharmacyName") ?: ""
-            val medicineName = backStackEntry.arguments?.getString("medicineName") ?: ""
+            val pharmacyName = Uri.decode(backStackEntry.arguments?.getString("pharmacyName") ?: "")
+            val medicineName = Uri.decode(backStackEntry.arguments?.getString("medicineName") ?: "")
             ReservationConfirmationScreen(
                 pharmacyName = pharmacyName,
                 medicineName = medicineName,
@@ -194,7 +195,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
 
         composable(NavRoutes.PRICE_COMPARISON) { backStackEntry ->
             val medicineId = backStackEntry.arguments?.getString("medicineId") ?: ""
-            val medicineName = backStackEntry.arguments?.getString("medicineName") ?: ""
+            val medicineName = Uri.decode(backStackEntry.arguments?.getString("medicineName") ?: "")
             PriceComparisonScreen(medicineId = medicineId, medicineName = medicineName)
         }
     }

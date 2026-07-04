@@ -73,6 +73,14 @@ data class ReminderUpdateRequest(
     val isActive: Boolean? = null
 )
 
+data class ReservationDetailResponse(
+    val _id: String,
+    val userId: String,
+    val pharmacyId: PharmacyResponse,
+    val medicineId: MedicineResponse,
+    val status: String
+)
+
 data class ReminderResponse(
     val _id: String,
     val userId: String,

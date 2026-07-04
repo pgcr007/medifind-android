@@ -10,12 +10,20 @@ import com.medifind.app.data.remote.ReservationResponse
 import com.medifind.app.data.repository.ReservationRepository
 import com.medifind.app.data.repository.TokenManager
 import kotlinx.coroutines.launch
+import com.medifind.app.data.remote.ReservationDetailResponse
 
 sealed class ReservationUiState {
     object Idle : ReservationUiState()
     object Loading : ReservationUiState()
     data class Success(val reservation: ReservationResponse) : ReservationUiState()
     data class Error(val message: String) : ReservationUiState()
+}
+
+sealed class MyReservationsUiState {
+    object Idle : MyReservationsUiState()
+    object Loading : MyReservationsUiState()
+    data class Success(val reservations: List<ReservationDetailResponse>) : MyReservationsUiState()
+    data class Error(val message: String) : MyReservationsUiState()
 }
 
 class ReservationViewModel(application: Application) : AndroidViewModel(application) {
@@ -49,5 +57,25 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
 
     fun resetState() {
         uiState = ReservationUiState.Idle
+    }
+
+    var myReservationsState by mutableStateOf<MyReservationsUiState>(MyReservationsUiState.Idle)
+        private set
+
+    fun loadMyReservations() {
+        val token = tokenManager.getToken()
+        if (token == null) {
+            myReservationsState = MyReservationsUiState.Error("Please log in to view your reservations.")
+            return
+        }
+        myReservationsState = MyReservationsUiState.Loading
+        viewModelScope.launch {
+            val result = repository.getMyReservations(token)
+            result.onSuccess { list ->
+                myReservationsState = MyReservationsUiState.Success(list)
+            }.onFailure { error ->
+                myReservationsState = MyReservationsUiState.Error(error.message ?: "Failed to load reservations")
+            }
+        }
     }
 }

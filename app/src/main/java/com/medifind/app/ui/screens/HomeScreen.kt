@@ -36,6 +36,7 @@ import com.medifind.app.ui.navigation.PendingSearchQueryHolder
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Locale
+import androidx.compose.material.icons.filled.Assignment
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +48,7 @@ fun HomeScreen(
     onChatClick: () -> Unit,
     onRemindersClick: () -> Unit,
     onVaultClick: () -> Unit,
+    onMyReservationsClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = viewModel()
 ) {
@@ -132,6 +134,9 @@ fun HomeScreen(
                 actions = {
                     IconButton(onClick = onRemindersClick) {
                         Icon(Icons.Default.Notifications, contentDescription = "Reminders")
+                    }
+                    IconButton(onClick = onMyReservationsClick) {
+                        Icon(Icons.Default.Assignment, contentDescription = "My Reservations")
                     }
                     IconButton(onClick = onVaultClick) {
                         Icon(Icons.Default.MedicalServices, contentDescription = "Prescription Vault")

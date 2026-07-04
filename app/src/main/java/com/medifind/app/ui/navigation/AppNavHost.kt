@@ -65,7 +65,8 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                 onBarcodeScanClick = { navController.navigate(NavRoutes.BARCODE_SCAN) },
                 onChatClick = { navController.navigate(NavRoutes.CHAT) },
                 onRemindersClick = { navController.navigate(NavRoutes.REMINDERS) },
-                onVaultClick = { navController.navigate(NavRoutes.PRESCRIPTION_VAULT) }
+                onVaultClick = { navController.navigate(NavRoutes.PRESCRIPTION_VAULT) },
+                onMyReservationsClick = { navController.navigate(NavRoutes.MY_RESERVATIONS) }
             )
         }
 
@@ -176,6 +177,10 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                     }
                 }
             )
+        }
+
+        composable(NavRoutes.MY_RESERVATIONS) {
+            MyReservationsScreen()
         }
 
         composable(NavRoutes.PRESCRIPTION_DETAIL) {

@@ -65,7 +65,7 @@ interface ApiService {
     ): Response<ReservationResponse>
 
     @GET("api/reservations/me")
-    suspend fun getMyReservations(@Header("Authorization") token: String): Response<List<ReservationResponse>>
+    suspend fun getMyReservations(@Header("Authorization") token: String): Response<List<ReservationDetailResponse>>
 
     @POST("api/chat")
     suspend fun sendChatMessage(

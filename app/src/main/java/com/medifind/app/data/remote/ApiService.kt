@@ -109,4 +109,19 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: ProfileUpdateRequest
     ): Response<UserProfileResponse>
+
+    @POST("api/reviews")
+    suspend fun submitReview(
+        @Header("Authorization") token: String,
+        @Body request: CreateReviewRequest
+    ): Response<ReviewResponse>
+
+    @GET("api/reviews/pharmacy/{pharmacyId}")
+    suspend fun getPharmacyReviews(@Path("pharmacyId") pharmacyId: String): Response<List<ReviewResponse>>
+
+    @GET("api/reviews/pharmacy/{pharmacyId}/mine")
+    suspend fun getMyReview(
+        @Header("Authorization") token: String,
+        @Path("pharmacyId") pharmacyId: String
+    ): Response<ReviewResponse?>
 }

@@ -15,7 +15,25 @@ data class ChatResponse(val reply: String, val searchResults: ChatSearchResults?
 
 data class AlternativesResponse(val alternatives: List<MedicineResponse>)
 
+data class ReviewUserResponse(val _id: String, val name: String)
 
+data class OwnerReplyResponse(val text: String? = null, val repliedAt: String? = null)
+
+data class ReviewResponse(
+    val _id: String,
+    val pharmacyId: String,
+    val userId: ReviewUserResponse,
+    val rating: Int,
+    val comment: String,
+    val ownerReply: OwnerReplyResponse? = null,
+    val createdAt: String? = null
+)
+
+data class CreateReviewRequest(
+    val pharmacyId: String,
+    val rating: Int,
+    val comment: String
+)
 
 data class PharmacyResponse(
     val _id: String,
@@ -23,7 +41,9 @@ data class PharmacyResponse(
     val address: String,
     val latitude: Double,
     val longitude: Double,
-    val verified: Boolean
+    val verified: Boolean,
+    val averageRating: Double? = null,
+    val reviewCount: Int? = null
 )
 
 data class SearchResultPharmacy(
@@ -49,7 +69,9 @@ data class PharmacyNearbyResponse(
     val verified: Boolean,
     val distanceKm: Double,
     val stockQty: Int? = null,
-    val price: Double? = null
+    val price: Double? = null,
+    val averageRating: Double? = null,
+    val reviewCount: Int? = null
 )
 
 data class ReservationRequest(val pharmacyId: String, val medicineId: String)

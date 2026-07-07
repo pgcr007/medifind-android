@@ -34,6 +34,12 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val result = repository.login(email, password)
             result.onSuccess { response ->
+                if (response.user.role != "user") {
+                    uiState = AuthUiState.Error(
+                        "This app is for patient accounts. Pharmacy owners should use the Pharmacy Dashboard."
+                    )
+                    return@onSuccess
+                }
                 tokenManager.saveToken(response.token)
                 tokenManager.saveUserInfo(response.user.name, response.user.email, response.user.role)
                 uiState = AuthUiState.Success(response.user.role)

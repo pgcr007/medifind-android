@@ -7,8 +7,20 @@ import com.medifind.app.data.remote.RegisterRequest
 import com.medifind.app.data.remote.RetrofitInstance
 import com.medifind.app.data.remote.UserProfileResponse
 import com.medifind.app.data.remote.UserResponse
+import org.json.JSONObject
+import retrofit2.Response
 
 class AuthRepository {
+
+    private fun extractErrorMessage(response: Response<*>, fallback: String): String {
+        val rawBody = response.errorBody()?.string()
+        if (rawBody.isNullOrBlank()) return fallback
+        return try {
+            JSONObject(rawBody).optString("error", fallback)
+        } catch (e: Exception) {
+            fallback
+        }
+    }
 
     suspend fun register(name: String, email: String, password: String, role: String): Result<UserResponse> {
         return try {
@@ -16,7 +28,7 @@ class AuthRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception(response.errorBody()?.string() ?: "Registration failed"))
+                Result.failure(Exception(extractErrorMessage(response, "Registration failed")))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -29,7 +41,7 @@ class AuthRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception(response.errorBody()?.string() ?: "Login failed"))
+                Result.failure(Exception(extractErrorMessage(response, "Login failed")))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -42,7 +54,7 @@ class AuthRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception(response.errorBody()?.string() ?: "Failed to load profile"))
+                Result.failure(Exception(extractErrorMessage(response, "Failed to load profile")))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -55,7 +67,7 @@ class AuthRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception(response.errorBody()?.string() ?: "Failed to update profile"))
+                Result.failure(Exception(extractErrorMessage(response, "Failed to update profile")))
             }
         } catch (e: Exception) {
             Result.failure(e)

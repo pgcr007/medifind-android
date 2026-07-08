@@ -170,10 +170,9 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
         composable(NavRoutes.BARCODE_SCAN) {
             PrescriptionScanScreen(
                 mode = ScanMode.BARCODE,
-                onMedicineNameSelected = { value ->
-                    PendingSearchQueryHolder.query = value
-                    navController.navigate(NavRoutes.HOME) {
-                        popUpTo(NavRoutes.HOME) { inclusive = true }
+                onBarcodeMedicineFound = { medicine ->
+                    navController.navigate(NavRoutes.pharmacyResults(medicine._id, Uri.encode(medicine.name))) {
+                        popUpTo(NavRoutes.HOME)
                     }
                 }
             )

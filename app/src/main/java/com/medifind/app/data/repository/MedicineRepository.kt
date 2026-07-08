@@ -18,6 +18,19 @@ class MedicineRepository {
         }
     }
 
+    suspend fun getMedicineByBarcode(code: String): Result<MedicineResponse> {
+        return try {
+            val response = RetrofitInstance.api.getMedicineByBarcode(code)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception(response.errorBody()?.string() ?: "No medicine found for this barcode"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getAlternatives(medicineId: String): Result<List<MedicineResponse>> {
         return try {
             val response = RetrofitInstance.api.getAlternatives(medicineId)

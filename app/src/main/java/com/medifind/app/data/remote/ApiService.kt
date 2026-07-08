@@ -44,6 +44,9 @@ interface ApiService {
     @GET("api/medicines/search")
     suspend fun searchMedicines(@Query("name") name: String): Response<List<MedicineResponse>>
 
+    @GET("api/medicines/barcode/{code}")
+    suspend fun getMedicineByBarcode(@Path("code") code: String): Response<MedicineResponse>
+
     @GET("api/pharmacies/nearby")
     suspend fun getNearbyPharmacies(
         @Query("lat") lat: Double,

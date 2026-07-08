@@ -32,6 +32,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import com.medifind.app.data.remote.MedicineResponse
+import com.medifind.app.data.repository.MedicineRepository
 import com.medifind.app.data.repository.OcrHelper
 import com.medifind.app.data.repository.PrescriptionParser
 import com.medifind.app.data.repository.PrescriptionRepository
@@ -47,6 +49,7 @@ enum class ScanMode { SEARCH, VAULT, BARCODE }
 fun PrescriptionScanScreen(
     mode: ScanMode = ScanMode.SEARCH,
     onMedicineNameSelected: (String) -> Unit = {},
+    onBarcodeMedicineFound: (MedicineResponse) -> Unit = {},
     onSavedToVault: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -55,6 +58,7 @@ fun PrescriptionScanScreen(
     val scope = rememberCoroutineScope()
     val ocrHelper = remember { OcrHelper() }
     val prescriptionRepository = remember { PrescriptionRepository(context.applicationContext) }
+    val medicineRepository = remember { MedicineRepository() }
     val tokenManager = remember { TokenManager(context) }
 
     var hasCameraPermission by remember {
@@ -195,10 +199,16 @@ fun PrescriptionScanScreen(
                                 scope.launch {
                                     if (mode == ScanMode.BARCODE) {
                                         val result = scanBarcode(bitmap)
-                                        isProcessing = false
                                         result.onSuccess { value ->
-                                            onMedicineNameSelected(value)
+                                            val medResult = medicineRepository.getMedicineByBarcode(value)
+                                            isProcessing = false
+                                            medResult.onSuccess { medicine ->
+                                                onBarcodeMedicineFound(medicine)
+                                            }.onFailure {
+                                                errorMessage = "No medicine found for this barcode. It may not have been added to the catalog yet."
+                                            }
                                         }.onFailure {
+                                            isProcessing = false
                                             errorMessage = it.message ?: "No barcode detected. Try again."
                                         }
                                     } else {

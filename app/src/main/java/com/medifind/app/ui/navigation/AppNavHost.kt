@@ -93,7 +93,7 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
                 navController.getBackStackEntry(NavRoutes.PHARMACY_RESULTS)
             }
             val medicineId = parentEntry.arguments?.getString("medicineId") ?: ""
-            val medicineName = parentEntry.arguments?.getString("medicineName") ?: ""
+            val medicineName = Uri.decode(parentEntry.arguments?.getString("medicineName") ?: "")
             val pharmacy = SelectedPharmacyHolder.pharmacy
 
             if (pharmacy != null) {

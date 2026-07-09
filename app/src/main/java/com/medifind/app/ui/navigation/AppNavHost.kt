@@ -7,6 +7,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.platform.LocalContext
+import com.medifind.app.data.repository.TokenManager
 import com.medifind.app.ui.screens.*
 import androidx.compose.ui.Modifier
 import android.net.Uri
@@ -15,7 +17,13 @@ import android.net.Uri
 @Composable
 fun AppNavHost(navController: NavHostController = rememberNavController(), modifier: Modifier = Modifier) {
 
-    NavHost(navController = navController, startDestination = NavRoutes.LOGIN, modifier = modifier) {
+    val context = LocalContext.current
+    val tokenManager = remember { TokenManager(context) }
+    val startDestination = remember {
+        if (tokenManager.getToken() != null) NavRoutes.HOME else NavRoutes.LOGIN
+    }
+
+    NavHost(navController = navController, startDestination = startDestination, modifier = modifier) {
 
         composable(NavRoutes.CHAT) {
             ChatScreen()

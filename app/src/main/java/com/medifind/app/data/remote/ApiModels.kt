@@ -71,8 +71,27 @@ data class PharmacyNearbyResponse(
     val stockQty: Int? = null,
     val price: Double? = null,
     val averageRating: Double? = null,
-    val reviewCount: Int? = null
+    val reviewCount: Int? = null,
+    // Added by the trust / emergency backend. All nullable so older responses still parse.
+    val phone: String? = null,
+    val is24Hours: Boolean? = null,
+    val freshness: String? = null,        // fresh | recent | stale | outdated
+    val ageHours: Double? = null,
+    val lastVerifiedAt: String? = null,
+    val disputed: Boolean? = null,
+    val stockConfidence: Int? = null,     // 0-100
+    val callAhead: Boolean? = null,
+    val reliabilityScore: Double? = null,
+    val reliabilityReports: Int? = null,
+    val priceRank: Int? = null,
+    val isLowestPrice: Boolean? = null,
+    val emergencyRank: Int? = null,
+    val score: Double? = null
 )
+
+data class StockReportRequest(val pharmacyId: String, val medicineId: String, val inStock: Boolean)
+
+data class StockReportResponse(val _id: String, val inStock: Boolean)
 
 data class ReservationRequest(val pharmacyId: String, val medicineId: String)
 

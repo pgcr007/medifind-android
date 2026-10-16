@@ -51,7 +51,9 @@ interface ApiService {
     suspend fun getNearbyPharmacies(
         @Query("lat") lat: Double,
         @Query("lng") lng: Double,
-        @Query("medicineId") medicineId: String? = null
+        @Query("medicineId") medicineId: String? = null,
+        @Query("emergencyOnly") emergencyOnly: Boolean? = null,
+        @Query("sort") sort: String? = null
     ): Response<List<PharmacyNearbyResponse>>
 
     @GET("api/pharmacies/{id}")
@@ -66,6 +68,12 @@ interface ApiService {
         @Header("Authorization") token: String,
         @Body request: ReservationRequest
     ): Response<ReservationResponse>
+
+    @POST("api/stock-reports")
+    suspend fun submitStockReport(
+        @Header("Authorization") token: String,
+        @Body request: StockReportRequest
+    ): Response<StockReportResponse>
 
     @GET("api/reservations/me")
     suspend fun getMyReservations(@Header("Authorization") token: String): Response<List<ReservationDetailResponse>>

@@ -7,6 +7,8 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import androidx.compose.ui.platform.LocalContext
 import com.medifind.app.data.repository.TokenManager
 import com.medifind.app.ui.screens.*
@@ -65,8 +67,8 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
 
         composable(NavRoutes.HOME) {
             HomeScreen(
-                onMedicineSelected = { medicine ->
-                    navController.navigate(NavRoutes.pharmacyResults(medicine._id, Uri.encode(medicine.name)))
+                onMedicineSelected = { medicine, emergency ->
+                    navController.navigate(NavRoutes.pharmacyResults(medicine._id, Uri.encode(medicine.name), emergency))
                 },
                 onProfileClick = { navController.navigate(NavRoutes.PROFILE) },
                 onScanClick = { navController.navigate(NavRoutes.PRESCRIPTION_SCAN) },
@@ -78,12 +80,22 @@ fun AppNavHost(navController: NavHostController = rememberNavController(), modif
             )
         }
 
-        composable(NavRoutes.PHARMACY_RESULTS) { backStackEntry ->
+        composable(
+            NavRoutes.PHARMACY_RESULTS,
+            arguments = listOf(
+                navArgument("emergency") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                }
+            )
+        ) { backStackEntry ->
             val medicineId = backStackEntry.arguments?.getString("medicineId") ?: ""
             val medicineName = Uri.decode(backStackEntry.arguments?.getString("medicineName") ?: "")
+            val emergency = backStackEntry.arguments?.getBoolean("emergency") ?: false
             PharmacyResultsScreen(
                 medicineId = medicineId,
                 medicineName = medicineName,
+                emergency = emergency,
                 onPharmacySelected = { pharmacy ->
                     SelectedPharmacyHolder.pharmacy = pharmacy
                     navController.navigate(NavRoutes.PHARMACY_DETAIL)

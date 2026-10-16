@@ -2,6 +2,7 @@ package com.medifind.app.ui.viewmodel
 
 import android.app.Application
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
@@ -57,6 +58,34 @@ class ReservationViewModel(application: Application) : AndroidViewModel(applicat
 
     fun resetState() {
         uiState = ReservationUiState.Idle
+    }
+
+    // reservationId -> the patient's answer to "Was it in stock?". Held in memory only;
+    // answering again just replaces the earlier answer on the backend.
+    val stockReports = mutableStateMapOf<String, Boolean>()
+
+    var stockReportError by mutableStateOf<String?>(null)
+        private set
+
+    fun submitStockReport(reservation: ReservationDetailResponse, inStock: Boolean) {
+        val token = tokenManager.getToken()
+        if (token == null) {
+            stockReportError = "Please log in to answer."
+            return
+        }
+        stockReportError = null
+        viewModelScope.launch {
+            repository.submitStockReport(
+                token = token,
+                pharmacyId = reservation.pharmacyId._id,
+                medicineId = reservation.medicineId._id,
+                inStock = inStock
+            ).onSuccess {
+                stockReports[reservation._id] = inStock
+            }.onFailure {
+                stockReportError = "Couldn't send your answer. Try again."
+            }
+        }
     }
 
     var myReservationsState by mutableStateOf<MyReservationsUiState>(MyReservationsUiState.Idle)

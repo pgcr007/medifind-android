@@ -6,9 +6,23 @@ import com.medifind.app.data.remote.RetrofitInstance
 
 class PharmacyRepository {
 
-    suspend fun getNearbyPharmacies(lat: Double, lng: Double, medicineId: String?): Result<List<PharmacyNearbyResponse>> {
+    // emergencyOnly=true asks the backend for 24-hour pharmacies only. sort is one of
+    // distance | price | confidence | best; null lets the backend choose its default.
+    suspend fun getNearbyPharmacies(
+        lat: Double,
+        lng: Double,
+        medicineId: String?,
+        emergencyOnly: Boolean = false,
+        sort: String? = null
+    ): Result<List<PharmacyNearbyResponse>> {
         return try {
-            val response = RetrofitInstance.api.getNearbyPharmacies(lat, lng, medicineId)
+            val response = RetrofitInstance.api.getNearbyPharmacies(
+                lat = lat,
+                lng = lng,
+                medicineId = medicineId,
+                emergencyOnly = if (emergencyOnly) true else null,
+                sort = sort
+            )
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {

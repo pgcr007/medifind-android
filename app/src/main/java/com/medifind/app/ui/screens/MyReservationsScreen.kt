@@ -61,8 +61,21 @@ fun MyReservationsScreen(
                             modifier = Modifier.fillMaxSize().padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            viewModel.stockReportError?.let { message ->
+                                item {
+                                    Text(
+                                        text = message,
+                                        color = MaterialTheme.colorScheme.error,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
                             items(state.reservations) { reservation ->
-                                ReservationCard(reservation)
+                                ReservationCard(
+                                    reservation = reservation,
+                                    reportedInStock = viewModel.stockReports[reservation._id],
+                                    onReport = { inStock -> viewModel.submitStockReport(reservation, inStock) }
+                                )
                             }
                         }
                     }
@@ -73,7 +86,11 @@ fun MyReservationsScreen(
 }
 
 @Composable
-private fun ReservationCard(reservation: ReservationDetailResponse) {
+private fun ReservationCard(
+    reservation: ReservationDetailResponse,
+    reportedInStock: Boolean?,
+    onReport: (Boolean) -> Unit
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -95,6 +112,32 @@ private fun ReservationCard(reservation: ReservationDetailResponse) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            // After the pharmacy confirms, ask the patient whether the medicine was really
+            // there. These answers feed the reliability score other patients see.
+            if (reservation.status == "confirmed") {
+                Spacer(modifier = Modifier.height(10.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(10.dp))
+                if (reportedInStock == null) {
+                    Text(
+                        text = "Was it in stock when you went?",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = { onReport(true) }) { Text("Yes") }
+                        OutlinedButton(onClick = { onReport(false) }) { Text("No") }
+                    }
+                } else {
+                    Text(
+                        text = "Thanks. You reported: ${if (reportedInStock) "in stock" else "not in stock"}.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(onClick = { onReport(!reportedInStock) }) { Text("Change answer") }
+                }
+            }
         }
     }
 }

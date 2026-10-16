@@ -11,6 +11,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Mic
@@ -48,7 +49,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onMedicineSelected: (MedicineResponse) -> Unit,
+    onMedicineSelected: (MedicineResponse, Boolean) -> Unit,
     onProfileClick: () -> Unit,
     onScanClick: () -> Unit,
     onBarcodeScanClick: () -> Unit,
@@ -64,6 +65,7 @@ fun HomeScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
+    var emergencyMode by remember { mutableStateOf(false) }
     var isListening by remember { mutableStateOf(false) }
     var voiceError by remember { mutableStateOf<String?>(null) }
 
@@ -228,6 +230,26 @@ fun HomeScreen(
                 Text("Search", style = MaterialTheme.typography.titleSmall)
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+            FilterChip(
+                selected = emergencyMode,
+                onClick = { emergencyMode = !emergencyMode },
+                label = { Text("Emergency mode: 24-hour pharmacies only") },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.LocalHospital,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                shape = RoundedCornerShape(10.dp),
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.errorContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onErrorContainer,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            )
+
             voiceError?.let {
                 Text(
                     text = it,
@@ -265,7 +287,11 @@ fun HomeScreen(
             when (state) {
                 is SearchUiState.Idle -> {
                     Text(
-                        text = "Search for a medicine to see availability nearby.",
+                        text = if (emergencyMode) {
+                            "Emergency mode is on. Search for the medicine you need and we'll show 24-hour pharmacies first."
+                        } else {
+                            "Search for a medicine to see availability nearby."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -287,7 +313,7 @@ fun HomeScreen(
                     } else {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             items(state.results) { medicine ->
-                                MedicineResultCard(medicine = medicine, onClick = { onMedicineSelected(medicine) })
+                                MedicineResultCard(medicine = medicine, onClick = { onMedicineSelected(medicine, emergencyMode) })
                             }
                         }
                     }

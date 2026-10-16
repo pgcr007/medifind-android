@@ -5,7 +5,7 @@ object NavRoutes {
     const val LOGIN = "login"
     const val REGISTER = "register"
     const val HOME = "home"
-    const val PHARMACY_RESULTS = "pharmacy_results/{medicineId}/{medicineName}"
+    const val PHARMACY_RESULTS = "pharmacy_results/{medicineId}/{medicineName}?emergency={emergency}"
 
     const val PRICE_COMPARISON = "price_comparison/{medicineId}/{medicineName}"
 
@@ -30,8 +30,8 @@ object NavRoutes {
     // add alongside PRESCRIPTION_SCAN_VAULT
     const val BARCODE_SCAN = "barcode_scan"
 
-    fun pharmacyResults(medicineId: String, medicineName: String) =
-        "pharmacy_results/$medicineId/${Uri.encode(medicineName)}"
+    fun pharmacyResults(medicineId: String, medicineName: String, emergency: Boolean = false) =
+        "pharmacy_results/$medicineId/${Uri.encode(medicineName)}?emergency=$emergency"
 
     fun priceComparison(medicineId: String, medicineName: String) =
         "price_comparison/$medicineId/${Uri.encode(medicineName)}"

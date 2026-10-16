@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -135,6 +137,25 @@ fun PharmacyDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                TrustBadge(pharmacy = pharmacy, modifier = Modifier.padding(top = 8.dp))
+            }
+        }
+
+        val phone = pharmacy.phone
+        if (!phone.isNullOrBlank()) {
+            val context = LocalContext.current
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = { dialPharmacy(context, phone) },
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) {
+                Icon(Icons.Filled.Call, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (pharmacy.callAhead == true) "Call to confirm stock first" else "Call pharmacy",
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
 

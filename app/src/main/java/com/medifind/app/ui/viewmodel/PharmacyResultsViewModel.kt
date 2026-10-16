@@ -31,10 +31,18 @@ class PharmacyResultsViewModel : ViewModel() {
     var isLoadingAlternatives by mutableStateOf(false)
         private set
 
-    fun loadNearbyPharmacies(lat: Double, lng: Double, medicineId: String) {
+    // emergency = true: 24-hour pharmacies only, ranked by distance AND stock trust
+    // ("best") instead of distance alone.
+    fun loadNearbyPharmacies(lat: Double, lng: Double, medicineId: String, emergency: Boolean = false) {
         uiState = PharmacyResultsUiState.Loading
         viewModelScope.launch {
-            val result = repository.getNearbyPharmacies(lat, lng, medicineId)
+            val result = repository.getNearbyPharmacies(
+                lat = lat,
+                lng = lng,
+                medicineId = medicineId,
+                emergencyOnly = emergency,
+                sort = if (emergency) "best" else null
+            )
             result.onSuccess { pharmacies ->
                 uiState = PharmacyResultsUiState.Success(pharmacies)
                 if (pharmacies.isEmpty()) {

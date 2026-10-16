@@ -31,6 +31,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Call
 
 @androidx.annotation.RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
 @Composable
@@ -39,6 +40,7 @@ fun PharmacyResultsScreen(
     medicineName: String,
     onPharmacySelected: (PharmacyNearbyResponse) -> Unit,
     onComparePricesClick: () -> Unit,
+    emergency: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: PharmacyResultsViewModel = viewModel()
 ) {
@@ -63,15 +65,16 @@ fun PharmacyResultsScreen(
             val locationHelper = LocationHelper(context)
             val location = locationHelper.getCurrentLocation()
             if (location != null) {
-                viewModel.loadNearbyPharmacies(location.first, location.second, medicineId)
+                viewModel.loadNearbyPharmacies(location.first, location.second, medicineId, emergency)
             } else {
-                viewModel.loadNearbyPharmacies(19.0760, 72.8777, medicineId)
+                viewModel.loadNearbyPharmacies(19.0760, 72.8777, medicineId, emergency)
             }
         }
     }
 
     val state = viewModel.uiState
-    var sortByPrice by remember { mutableStateOf(false) }
+    // best = server order (distance + stock trust in emergency mode), nearest, cheapest
+    var sortMode by remember { mutableStateOf(if (emergency) "best" else "nearest") }
 
     Column(
         modifier = modifier
@@ -79,19 +82,47 @@ fun PharmacyResultsScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Text(
-            text = "Pharmacies with \"$medicineName\"",
+            text = if (emergency) "Emergency: \"$medicineName\"" else "Pharmacies with \"$medicineName\"",
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(16.dp)
         )
 
+        if (emergency) {
+            Card(
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = "Showing 24-hour pharmacies only, ranked by distance and how recently their stock was confirmed. Call ahead when a pharmacy is marked.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            if (emergency) {
+                FilterChip(
+                    selected = sortMode == "best",
+                    onClick = { sortMode = "best" },
+                    label = { Text("Best match") },
+                    shape = RoundedCornerShape(10.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+            }
             FilterChip(
-                selected = !sortByPrice,
-                onClick = { sortByPrice = false },
+                selected = sortMode == "nearest",
+                onClick = { sortMode = "nearest" },
                 label = { Text("Nearest") },
                 shape = RoundedCornerShape(10.dp),
                 colors = FilterChipDefaults.filterChipColors(
@@ -100,8 +131,8 @@ fun PharmacyResultsScreen(
                 )
             )
             FilterChip(
-                selected = sortByPrice,
-                onClick = { sortByPrice = true },
+                selected = sortMode == "cheapest",
+                onClick = { sortMode = "cheapest" },
                 label = { Text("Cheapest") },
                 shape = RoundedCornerShape(10.dp),
                 colors = FilterChipDefaults.filterChipColors(
@@ -135,7 +166,11 @@ fun PharmacyResultsScreen(
                 if (state.pharmacies.isEmpty()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "No nearby pharmacies currently stock this medicine.",
+                            text = if (emergency) {
+                                "No 24-hour pharmacy currently lists this medicine. Check the alternatives below, or turn off Emergency mode to see all pharmacies."
+                            } else {
+                                "No nearby pharmacies currently stock this medicine."
+                            },
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -183,10 +218,10 @@ fun PharmacyResultsScreen(
                         }
                     }
                 } else {
-                    val sortedPharmacies = if (sortByPrice) {
-                        state.pharmacies.sortedBy { it.price?.toDouble() ?: Double.MAX_VALUE }
-                    } else {
-                        state.pharmacies
+                    val sortedPharmacies = when (sortMode) {
+                        "cheapest" -> state.pharmacies.sortedBy { it.price?.toDouble() ?: Double.MAX_VALUE }
+                        "nearest" -> state.pharmacies.sortedBy { it.distanceKm }
+                        else -> state.pharmacies // server order: "best" in emergency mode
                     }
                     val cheapestId = state.pharmacies
                         .filter { it.price != null }
@@ -230,6 +265,7 @@ fun PharmacyResultsScreen(
                             PharmacyCard(
                                 pharmacy = pharmacy,
                                 isCheapest = pharmacy.price != null && pharmacy._id == cheapestId,
+                                emergency = emergency,
                                 onClick = { onPharmacySelected(pharmacy) }
                             )
                         }
@@ -242,7 +278,12 @@ fun PharmacyResultsScreen(
 }
 
 @Composable
-fun PharmacyCard(pharmacy: PharmacyNearbyResponse, isCheapest: Boolean, onClick: () -> Unit) {
+fun PharmacyCard(
+    pharmacy: PharmacyNearbyResponse,
+    isCheapest: Boolean,
+    onClick: () -> Unit,
+    emergency: Boolean = false
+) {
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -251,6 +292,15 @@ fun PharmacyCard(pharmacy: PharmacyNearbyResponse, isCheapest: Boolean, onClick:
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (emergency && pharmacy.emergencyRank != null) {
+                    Text(
+                        text = "#${pharmacy.emergencyRank}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontFamily = PlexMono),
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Text(
                     text = pharmacy.name,
                     style = MaterialTheme.typography.titleMedium,
@@ -314,6 +364,21 @@ fun PharmacyCard(pharmacy: PharmacyNearbyResponse, isCheapest: Boolean, onClick:
                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = PlexMono),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            TrustBadge(pharmacy = pharmacy, modifier = Modifier.padding(top = 6.dp))
+
+            val phone = pharmacy.phone
+            if (emergency && !phone.isNullOrBlank()) {
+                val context = LocalContext.current
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { dialPharmacy(context, phone) },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Filled.Call, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(if (pharmacy.callAhead == true) "Call to confirm stock" else "Call pharmacy")
+                }
             }
         }
     }

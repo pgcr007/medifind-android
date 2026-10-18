@@ -6,8 +6,10 @@ import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +24,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
@@ -29,15 +32,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.medifind.app.data.remote.UserProfileResponse
 import com.medifind.app.data.repository.TokenManager
+import com.medifind.app.ui.theme.Amber
+import com.medifind.app.ui.theme.BottleGreen
+import com.medifind.app.ui.theme.WarmPaper
 import com.medifind.app.ui.viewmodel.ProfileSaveState
 import com.medifind.app.ui.viewmodel.ProfileUiState
 import com.medifind.app.ui.viewmodel.ProfileViewModel
@@ -63,6 +72,7 @@ fun ProfileScreen(
     val saveState = viewModel.saveState
 
     var isEditing by remember { mutableStateOf(false) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
 
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -131,6 +141,28 @@ fun ProfileScreen(
         ).show()
     }
 
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Log out?") },
+            text = { Text("You'll need to sign in again to see your reservations and reminders.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showLogoutDialog = false
+                        tokenManager.clearAll()
+                        onLogout()
+                    }
+                ) {
+                    Text("Log out", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) { Text("Stay") }
+            }
+        )
+    }
+
     Box(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         when (uiState) {
             is ProfileUiState.Loading, is ProfileUiState.Idle -> {
@@ -144,183 +176,136 @@ fun ProfileScreen(
                 }
             }
             is ProfileUiState.Success -> {
+                val profile = uiState.profile
+                val avatarBitmap = pendingPreviewBitmap ?: decodeBase64ToBitmap(profile.profilePicture)
+
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(16.dp)
                 ) {
-                    Spacer(modifier = Modifier.height(20.dp))
-
-                    Box(contentAlignment = Alignment.BottomEnd) {
-                        val avatarBitmap = pendingPreviewBitmap ?: decodeBase64ToBitmap(uiState.profile.profilePicture)
-                        Box(
-                            modifier = Modifier
-                                .size(96.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary)
-                                .then(
-                                    if (isEditing) Modifier.clickable { imagePickerLauncher.launch("image/*") }
-                                    else Modifier
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (avatarBitmap != null) {
-                                Image(
-                                    bitmap = avatarBitmap.asImageBitmap(),
-                                    contentDescription = "Profile picture",
-                                    modifier = Modifier.fillMaxSize().clip(CircleShape)
-                                )
-                            } else {
-                                Text(
-                                    text = uiState.profile.name.firstOrNull()?.uppercase() ?: "?",
-                                    style = MaterialTheme.typography.headlineLarge,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                            }
-                        }
-                        if (isEditing) {
-                            Box(
-                                modifier = Modifier
-                                    .size(30.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.secondary)
-                                    .clickable { imagePickerLauncher.launch("image/*") },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.PhotoCamera,
-                                    contentDescription = "Change photo",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
+                    ProfileHero(
+                        profile = profile,
+                        avatar = avatarBitmap,
+                        isEditing = isEditing,
+                        onAvatarClick = { imagePickerLauncher.launch("image/*") },
+                        onEdit = { isEditing = true }
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (!isEditing) {
-                        Text(
-                            text = uiState.profile.name,
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = uiState.profile.email,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                        // Profile completeness (based on saved values)
+                        val missing = buildList {
+                            if (profile.phone.isNullOrBlank()) add("phone")
+                            if (profile.address.isNullOrBlank()) add("address")
+                            if (profile.dob.isNullOrBlank()) add("date of birth")
+                            if (profile.profilePicture.isNullOrBlank()) add("photo")
+                        }
+                        if (missing.isNotEmpty()) {
+                            // name + email are always present, so 2 of 6 are done by default
+                            val percent = (6 - missing.size) / 6f
+                            ProfileCompletenessCard(percent = percent, missing = missing)
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
 
-                    Spacer(modifier = Modifier.height(28.dp))
+                        ProfileSectionLabel("Account details")
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                    Card(
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Account Details",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                if (!isEditing) {
-                                    IconButton(onClick = { isEditing = true }) {
-                                        Icon(
-                                            Icons.Default.Edit,
-                                            contentDescription = "Edit profile",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
+                        ProfileCard {
+                            ProfileDetailRow(
+                                icon = Icons.Default.Email,
+                                label = "Email",
+                                value = profile.email
+                            )
+                            ProfileRowDivider()
+                            ProfileDetailRow(
+                                icon = Icons.Default.Phone,
+                                label = "Phone",
+                                value = profile.phone,
+                                onAdd = { isEditing = true }
+                            )
+                            ProfileRowDivider()
+                            ProfileDetailRow(
+                                icon = Icons.Default.Home,
+                                label = "Address",
+                                value = profile.address,
+                                onAdd = { isEditing = true }
+                            )
+                            ProfileRowDivider()
+                            ProfileDetailRow(
+                                icon = Icons.Default.CalendarToday,
+                                label = "Date of birth",
+                                value = profile.dob?.takeIf { it.isNotBlank() }?.let {
+                                    try {
+                                        dateFormatterIso.parse(it)?.let { d -> dateFormatterDisplay.format(d) } ?: it
+                                    } catch (_: Exception) { it }
+                                },
+                                onAdd = { isEditing = true }
+                            )
+                            ProfileRowDivider()
+                            ProfileDetailRow(
+                                icon = Icons.Default.Badge,
+                                label = "Account type",
+                                value = roleLabel(profile.role)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        OutlinedButton(
+                            onClick = { showLogoutDialog = true },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+                            shape = RoundedCornerShape(14.dp),
+                            modifier = Modifier.fillMaxWidth().height(50.dp)
+                        ) {
+                            Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Logout", fontWeight = FontWeight.Medium)
+                        }
+                    } else {
+                        ProfileSectionLabel("Edit details")
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        ProfileCard {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                EditField(label = "Name", value = name, onValueChange = { name = it }, icon = Icons.Default.Badge)
+                                Spacer(modifier = Modifier.height(10.dp))
+                                EditField(label = "Phone", value = phone, onValueChange = { phone = it }, icon = Icons.Default.Phone)
+                                Spacer(modifier = Modifier.height(10.dp))
+                                EditField(label = "Address", value = address, onValueChange = { address = it }, icon = Icons.Default.Home)
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                val dobDisplay = dobIso?.let {
+                                    try {
+                                        dateFormatterIso.parse(it)?.let { d -> dateFormatterDisplay.format(d) }
+                                    } catch (_: Exception) { it }
+                                } ?: ""
+
+                                Box(modifier = Modifier.fillMaxWidth().clickable { showDatePicker() }) {
+                                    OutlinedTextField(
+                                        value = dobDisplay,
+                                        onValueChange = {},
+                                        enabled = false,
+                                        label = { Text("Date of Birth") },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                                            disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                                            disabledLeadingIconColor = MaterialTheme.colorScheme.primary,
+                                            disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
                                 }
-                            }
-
-                            if (isEditing) {
-                                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                                    EditField(label = "Name", value = name, onValueChange = { name = it }, icon = Icons.Default.Badge)
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    EditField(label = "Phone", value = phone, onValueChange = { phone = it }, icon = Icons.Default.Phone)
-                                    Spacer(modifier = Modifier.height(10.dp))
-                                    EditField(label = "Address", value = address, onValueChange = { address = it }, icon = Icons.Default.Home)
-                                    Spacer(modifier = Modifier.height(10.dp))
-
-                                    val dobDisplay = dobIso?.let {
-                                        try {
-                                            dateFormatterIso.parse(it)?.let { d -> dateFormatterDisplay.format(d) }
-                                        } catch (_: Exception) { it }
-                                    } ?: ""
-
-                                    Box(modifier = Modifier.fillMaxWidth().clickable { showDatePicker() }) {
-                                        OutlinedTextField(
-                                            value = dobDisplay,
-                                            onValueChange = {},
-                                            enabled = false,
-                                            label = { Text("Date of Birth") },
-                                            leadingIcon = {
-                                                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                            },
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                                                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                                                disabledLeadingIconColor = MaterialTheme.colorScheme.primary,
-                                                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                            ),
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
-                                }
-                            } else {
-                                DetailRow(icon = Icons.Default.Email, label = "Email", value = uiState.profile.email)
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                                DetailRow(
-                                    icon = Icons.Default.Phone,
-                                    label = "Phone",
-                                    value = uiState.profile.phone?.takeIf { it.isNotBlank() } ?: "Not set"
-                                )
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                                DetailRow(
-                                    icon = Icons.Default.Home,
-                                    label = "Address",
-                                    value = uiState.profile.address?.takeIf { it.isNotBlank() } ?: "Not set"
-                                )
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                                DetailRow(
-                                    icon = Icons.Default.CalendarToday,
-                                    label = "Date of Birth",
-                                    value = uiState.profile.dob?.let {
-                                        try {
-                                            dateFormatterIso.parse(it)?.let { d -> dateFormatterDisplay.format(d) } ?: it
-                                        } catch (_: Exception) { it }
-                                    } ?: "Not set"
-                                )
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-                                DetailRow(
-                                    icon = Icons.Default.Badge,
-                                    label = "Account Type",
-                                    value = when (uiState.profile.role) {
-                                        "pharmacy" -> "Pharmacy Owner"
-                                        "admin" -> "Administrator"
-                                        else -> "Patient"
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
                             }
                         }
-                    }
 
-                    if (isEditing) {
                         Spacer(modifier = Modifier.height(16.dp))
 
                         if (saveState is ProfileSaveState.Error) {
@@ -336,10 +321,10 @@ fun ProfileScreen(
                             OutlinedButton(
                                 onClick = {
                                     isEditing = false
-                                    resetFieldsFrom(uiState.profile)
+                                    resetFieldsFrom(profile)
                                 },
-                                shape = RoundedCornerShape(12.dp),
-                                modifier = Modifier.weight(1f).height(48.dp)
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.weight(1f).height(50.dp)
                             ) {
                                 Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -357,9 +342,9 @@ fun ProfileScreen(
                                     )
                                 },
                                 enabled = saveState !is ProfileSaveState.Saving && name.isNotBlank(),
-                                shape = RoundedCornerShape(12.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                                modifier = Modifier.weight(1f).height(48.dp)
+                                modifier = Modifier.weight(1f).height(50.dp)
                             ) {
                                 if (saveState is ProfileSaveState.Saving) {
                                     CircularProgressIndicator(
@@ -373,28 +358,305 @@ fun ProfileScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    if (!isEditing) {
-                        OutlinedButton(
-                            onClick = {
-                                tokenManager.clearAll()
-                                onLogout()
-                            },
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth().height(48.dp)
-                        ) {
-                            Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Logout", fontWeight = FontWeight.Medium)
-                        }
-                    }
-
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+        }
+    }
+}
+
+// ---------- Pieces ----------
+
+private fun roleLabel(role: String?): String = when (role) {
+    "pharmacy" -> "Pharmacy Owner"
+    "admin" -> "Administrator"
+    else -> "Patient"
+}
+
+/** Bottle-green identity card: avatar with amber ring, name, email, role pill, edit button. */
+@Composable
+private fun ProfileHero(
+    profile: UserProfileResponse,
+    avatar: Bitmap?,
+    isEditing: Boolean,
+    onAvatarClick: () -> Unit,
+    onEdit: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Brush.linearGradient(listOf(BottleGreen, Color(0xFF1B3128))))
+    ) {
+        Icon(
+            imageVector = Icons.Default.MedicalServices,
+            contentDescription = null,
+            tint = WarmPaper.copy(alpha = 0.07f),
+            modifier = Modifier
+                .size(150.dp)
+                .align(Alignment.BottomStart)
+                .offset(x = (-36).dp, y = 32.dp)
+        )
+
+        if (!isEditing) {
+            IconButton(
+                onClick = onEdit,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp)
+                    .background(WarmPaper.copy(alpha = 0.14f), CircleShape)
+            ) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Edit profile",
+                    tint = WarmPaper,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(contentAlignment = Alignment.BottomEnd) {
+                Box(
+                    modifier = Modifier
+                        .size(108.dp)
+                        .clip(CircleShape)
+                        .border(3.dp, Amber, CircleShape)
+                        .background(WarmPaper.copy(alpha = 0.12f))
+                        .then(if (isEditing) Modifier.clickable(onClick = onAvatarClick) else Modifier),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (avatar != null) {
+                        Image(
+                            bitmap = avatar.asImageBitmap(),
+                            contentDescription = "Profile picture",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().padding(3.dp).clip(CircleShape)
+                        )
+                    } else {
+                        Text(
+                            text = profile.name.firstOrNull()?.uppercase() ?: "?",
+                            style = MaterialTheme.typography.headlineLarge,
+                            color = WarmPaper
+                        )
+                    }
+                }
+                if (isEditing) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Amber)
+                            .clickable(onClick = onAvatarClick),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.PhotoCamera,
+                            contentDescription = "Change photo",
+                            tint = Color.White,
+                            modifier = Modifier.size(17.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = profile.name,
+                style = MaterialTheme.typography.headlineSmall,
+                color = WarmPaper
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = profile.email,
+                style = MaterialTheme.typography.bodyMedium,
+                color = WarmPaper.copy(alpha = 0.75f)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Box(
+                modifier = Modifier
+                    .border(1.dp, Amber, RoundedCornerShape(50))
+                    .padding(horizontal = 12.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = roleLabel(profile.role).uppercase(Locale.getDefault()),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Amber,
+                    letterSpacing = 1.2.sp
+                )
+            }
+            if (isEditing) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "Tap your photo to change it",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = WarmPaper.copy(alpha = 0.7f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileCompletenessCard(percent: Float, missing: List<String>) {
+    val shape = RoundedCornerShape(18.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape)
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "PROFILE COMPLETENESS",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.sp
+            )
+            Text(
+                text = "${(percent * 100).toInt()}%",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        LinearProgressIndicator(
+            progress = { percent },
+            color = MaterialTheme.colorScheme.secondary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(50))
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = "Add your ${joinNatural(missing)} to finish your profile.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+private fun joinNatural(items: List<String>): String = when (items.size) {
+    0 -> ""
+    1 -> items[0]
+    2 -> "${items[0]} and ${items[1]}"
+    else -> items.dropLast(1).joinToString(", ") + " and " + items.last()
+}
+
+@Composable
+private fun ProfileSectionLabel(text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = text.uppercase(Locale.getDefault()),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = 1.2.sp
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            color = MaterialTheme.colorScheme.outlineVariant
+        )
+    }
+}
+
+@Composable
+private fun ProfileCard(content: @Composable ColumnScope.() -> Unit) {
+    val shape = RoundedCornerShape(18.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surface)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape),
+        content = content
+    )
+}
+
+@Composable
+private fun ProfileRowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(start = 68.dp),
+        color = MaterialTheme.colorScheme.outlineVariant
+    )
+}
+
+/** A ledger row. Empty values show a muted placeholder and, if [onAdd] is set, an "Add" action. */
+@Composable
+private fun ProfileDetailRow(
+    icon: ImageVector,
+    label: String,
+    value: String?,
+    onAdd: (() -> Unit)? = null
+) {
+    val isEmpty = value.isNullOrBlank()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (isEmpty && onAdd != null) Modifier.clickable(onClick = onAdd) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label.uppercase(Locale.getDefault()),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 1.sp
+            )
+            if (isEmpty) {
+                Text(
+                    text = "Not set",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                )
+            } else {
+                Text(
+                    text = value.orEmpty(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+        if (isEmpty && onAdd != null) {
+            Text(
+                text = "Add",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.secondary
+            )
         }
     }
 }
@@ -416,35 +678,7 @@ private fun EditField(label: String, value: String, onValueChange: (String) -> U
     )
 }
 
-@Composable
-private fun DetailRow(icon: ImageVector, label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
+// ---------- Image helpers (unchanged) ----------
 
 private fun resizeBitmap(bitmap: Bitmap, maxDimension: Int): Bitmap {
     val width = bitmap.width

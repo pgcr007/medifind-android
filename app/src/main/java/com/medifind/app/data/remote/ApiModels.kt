@@ -138,9 +138,10 @@ data class ReservationDetailResponse(
     val userId: String,
     val pharmacyId: PharmacyResponse,
     val medicineId: MedicineResponse,
-    val status: String
+    val status: String,
+    val createdAt: String? = null,
+    val updatedAt: String? = null
 )
-
 data class ReminderResponse(
     val _id: String,
     val userId: String,

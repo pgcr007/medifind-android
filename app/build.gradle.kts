@@ -7,11 +7,19 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+// Change the version in ONE place for each release. It sets both the app version
+// and the APK file name (MediFind-AI-<version>-release.apk).
+val appVersionName = "1.2"
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     id("com.google.gms.google-services")
     id("com.google.firebase.crashlytics")
+}
+
+base {
+    archivesName.set("MediFind-AI-$appVersionName")
 }
 
 android {
@@ -37,8 +45,8 @@ android {
         applicationId = "com.medifind.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 3          // must go up with every release
+        versionName = appVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
